@@ -570,59 +570,75 @@
     // 이 방식이 HTML 표 구조보다 제목/썸네일 매칭이 정확합니다.
     let extracted=extractRecordsFromPlainText(plain,attachmentMap);
 
-    // text/plain에서 찾지 못한 경우에만 HTML 링크 구조를 보조로 사용합니다.
-    if(!extracted.length){
-      const records=new Map();
-      doc.querySelectorAll('a[href]').forEach(a=>{
-        const href=(a.getAttribute("href")||"").trim();
-        if(!/^https?:\/\//i.test(href)) return;
-        const url=normalizeUrl(href);
-        let rec=records.get(url)||{title:"",image:"",link:url,group:classifyUrl(url)};
-        const text=meaningfulTitle(a.textContent);
-        if(text && text.length>rec.title.length) rec.title=text;
-        const img=a.querySelector("img");
-        if(img && img.src) rec.image=img.src;
-        records.set(url,rec);
-      });
-      extracted=[...records.values()];
-    }
-
-    cards=extracted
-      .filter(r=>r.title || r.image)
-      .map(r=>({
-        title:r.title||"제목을 입력하세요",
-        image:r.image||"",
-        link:r.link,
-        group:r.group
-      }));
-
-    // V6의 제목·링크 추출은 그대로 유지하고 썸네일만 메일의 고정 이미지 번호로 보정합니다.
-    const thumbnailNumbers={
-      "YouTube":[3,4,5,6],
-      "TikTok":[8,9,10,11],
-      "Instagram & SNS":[13,14,15,16],
-      "네이버TV 인기100":[18,19,20,21],
-      "해외 인기템":[23,24,25,26]
-    };
-
-    const fixedCards=[];
-    groups.forEach(group=>{
-      const groupCards=cards.filter(c=>c.group===group).slice(0,4);
-      groupCards.forEach((card,index)=>{
-        const no=(thumbnailNumbers[group]||[])[index];
-        fixedCards.push({
-          ...card,
-          image:(no && imageByNo[no]) ? imageByNo[no] : card.image
-        });
+    // HTML 안에서 실제 링크와 감싸진 이미지를 직접 읽습니다.
+    // 이미지 파일 번호는 주차마다 달라질 수 있으므로 image001~020 같은 번호를 절대 기준으로 사용하지 않습니다.
+    const htmlRecords=[];
+    doc.querySelectorAll('a[href]').forEach(a=>{
+      const href=(a.getAttribute("href")||"").trim();
+      if(!/^https?:\/\//i.test(href)) return;
+      const img=a.querySelector("img");
+      if(!img || !img.src || !img.src.startsWith("data:image")) return;
+      const url=normalizeUrl(href);
+      htmlRecords.push({
+        title:meaningfulTitle(a.textContent),
+        image:img.src,
+        link:url,
+        group:classifyUrl(url)
       });
     });
-    cards=fixedCards;
 
-    const bodyImages=[...doc.querySelectorAll("img")]
-      .map(img=>img.src)
-      .filter(src=>src && src.startsWith("data:image"));
-    if(imageByNo[1]) keywordImage=await cropKeywordTop(imageByNo[1]);
-    else if(bodyImages.length) keywordImage=bodyImages[0];
+    // plain text에서 얻은 제목/URL과 HTML에서 얻은 실제 썸네일을 URL 기준으로 결합합니다.
+    // URL이 같은 항목이 여러 개일 수 있으므로 사용 여부를 체크해 등장 순서를 유지합니다.
+    const usedHtml=new Set();
+    const merged=[];
+    extracted.forEach(rec=>{
+      let matchIndex=-1;
+      for(let i=0;i<htmlRecords.length;i++){
+        if(usedHtml.has(i)) continue;
+        if(normalizeUrl(htmlRecords[i].link)===normalizeUrl(rec.link)){
+          matchIndex=i; break;
+        }
+      }
+      const htmlRec=matchIndex>=0?htmlRecords[matchIndex]:null;
+      if(matchIndex>=0) usedHtml.add(matchIndex);
+      merged.push({
+        title:rec.title || (htmlRec&&htmlRec.title) || "제목을 입력하세요",
+        image:(htmlRec&&htmlRec.image) || rec.image || "",
+        link:rec.link || (htmlRec&&htmlRec.link) || "",
+        group:rec.group || (htmlRec&&htmlRec.group) || groups[groups.length-1]
+      });
+    });
+
+    // plain text 파싱이 누락한 HTML 카드도 뒤에 보완합니다.
+    htmlRecords.forEach((rec,i)=>{
+      if(usedHtml.has(i)) return;
+      merged.push({
+        title:rec.title||"제목을 입력하세요",
+        image:rec.image||"",
+        link:rec.link,
+        group:rec.group
+      });
+    });
+
+    cards=[];
+    groups.forEach(group=>{
+      merged.filter(r=>r.group===group).slice(0,4).forEach(r=>cards.push(r));
+    });
+
+    // Weekly Keyword는 메일 본문에서 '링크에 감싸지지 않은 첫 번째 대형 이미지'로 찾습니다.
+    // 주차별로 image001, image006, image022 등 번호가 달라도 자동 적용됩니다.
+    const keywordCandidate=[...doc.querySelectorAll("img")].find(img=>{
+      const src=img.src||"";
+      if(!src.startsWith("data:image")) return false;
+      if(img.closest("a[href]")) return false;
+      const w=parseInt(img.getAttribute("width")||img.width||0,10);
+      const h=parseInt(img.getAttribute("height")||img.height||0,10);
+      return w>=500 || h>=500;
+    }) || [...doc.querySelectorAll("img")].find(img=>{
+      const src=img.src||"";
+      return src.startsWith("data:image") && !img.closest("a[href]");
+    });
+    if(keywordCandidate) keywordImage=await cropKeywordTop(keywordCandidate.src);
 
     $("#mailText").value=plain;
 
@@ -648,7 +664,7 @@
     $("#emlStatus").textContent=
       `완료: 링크 카드 ${cards.length}개를 찾았습니다.`+
       (missingImages?` 썸네일 미연결 ${missingImages}개가 있습니다.`:"")+
-      `\nV6 방식으로 제목과 URL을 유지하고, 썸네일만 메일의 고정 이미지 번호로 보정했습니다.`;
+      `\n제목·링크·썸네일을 메일 안의 실제 연결 관계로 자동 매칭했습니다.`;
     render();
   }
 
