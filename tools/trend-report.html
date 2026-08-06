@@ -343,10 +343,41 @@
 
   function normalizeUrl(url){
     try{
-      const u=new URL(url);
-      ["utm_source","utm_medium","utm_campaign","utm_term","utm_content"].forEach(k=>u.searchParams.delete(k));
+      const u=new URL(String(url||"").trim());
+      ["utm_source","utm_medium","utm_campaign","utm_term","utm_content","si","_r","_t","is_from_webapp","sender_device","web_id"].forEach(k=>u.searchParams.delete(k));
+      u.hash="";
       return u.href;
-    }catch(e){ return url||""; }
+    }catch(e){ return String(url||"").trim(); }
+  }
+
+  // 같은 콘텐츠가 youtu.be / youtube.com, 추적 파라미터 등 서로 다른 주소로 들어와도
+  // 동일한 카드로 인식하기 위한 플랫폼별 고유 키입니다.
+  function linkKey(url){
+    try{
+      const u=new URL(normalizeUrl(url));
+      const host=u.hostname.replace(/^www\./,"").toLowerCase();
+      if(host==="youtu.be") return "youtube:"+u.pathname.split("/").filter(Boolean)[0];
+      if(host.endsWith("youtube.com")){
+        const v=u.searchParams.get("v");
+        if(v) return "youtube:"+v;
+        const m=u.pathname.match(/\/(?:shorts|embed)\/([^/?#]+)/i);
+        if(m) return "youtube:"+m[1];
+        return "youtube-path:"+u.pathname.replace(/\/$/,"").toLowerCase();
+      }
+      if(host.endsWith("tiktok.com")){
+        const m=u.pathname.match(/\/video\/(\d+)/i);
+        return m?"tiktok:"+m[1]:"tiktok-path:"+u.pathname.replace(/\/$/,"").toLowerCase();
+      }
+      if(host.endsWith("instagram.com")){
+        const m=u.pathname.match(/\/(?:p|reel|reels)\/([^/?#]+)/i);
+        return m?"instagram:"+m[1]:"instagram-path:"+u.pathname.replace(/\/$/,"").toLowerCase();
+      }
+      if(host==="tv.naver.com"){
+        const m=u.pathname.match(/\/v\/(\d+)/i);
+        return m?"navertv:"+m[1]:"navertv-path:"+u.pathname.replace(/\/$/,"").toLowerCase();
+      }
+      return host+u.pathname.replace(/\/$/,"").toLowerCase();
+    }catch(e){ return normalizeUrl(url); }
   }
 
   function dataUrlFromAttachment(att){
@@ -595,7 +626,7 @@
       let matchIndex=-1;
       for(let i=0;i<htmlRecords.length;i++){
         if(usedHtml.has(i)) continue;
-        if(normalizeUrl(htmlRecords[i].link)===normalizeUrl(rec.link)){
+        if(linkKey(htmlRecords[i].link)===linkKey(rec.link)){
           matchIndex=i; break;
         }
       }
@@ -609,16 +640,9 @@
       });
     });
 
-    // plain text 파싱이 누락한 HTML 카드도 뒤에 보완합니다.
-    htmlRecords.forEach((rec,i)=>{
-      if(usedHtml.has(i)) return;
-      merged.push({
-        title:rec.title||"제목을 입력하세요",
-        image:rec.image||"",
-        link:rec.link,
-        group:rec.group
-      });
-    });
+    // HTML에는 로고·장식·중복 링크 이미지가 많이 포함될 수 있습니다.
+    // 제목과 정확히 연결되지 않은 HTML 이미지는 자동 카드로 추가하지 않습니다.
+    // 이렇게 해야 다른 섹션 이미지가 끼어들거나 카드가 중복되는 현상을 막을 수 있습니다.
 
     cards=[];
     groups.forEach(group=>{
@@ -662,7 +686,7 @@
 
     const missingImages=cards.filter(c=>!c.image).length;
     $("#emlStatus").textContent=
-      `완료: 링크 카드 ${cards.length}개를 찾았습니다.`+
+      `완료: 제목·링크·이미지가 일치한 카드 ${cards.length}개를 찾았습니다.`+
       (missingImages?` 썸네일 미연결 ${missingImages}개가 있습니다.`:"")+
       `\n제목·링크·썸네일을 메일 안의 실제 연결 관계로 자동 매칭했습니다.`;
     render();
