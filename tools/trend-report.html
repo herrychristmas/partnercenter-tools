@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Trend Report Generator</title>
+<title>Trend Report Generator v17</title>
 <style>
   :root{
     --green:#00c83c;
@@ -408,17 +408,19 @@
     const u=(url||"").toLowerCase();
     if(u.includes("youtube.com")||u.includes("youtu.be")) return groups[0];
     if(u.includes("tiktok.com")) return groups[1];
-    if(u.includes("instagram.com")) return groups[2];
-    if(u.includes("tv.naver.com")) return groups[3];
+    if(u.includes("instagram.com")||u.includes("x.com")||u.includes("twitter.com")) return groups[2];
+    if(u.includes("tv.naver.com")||u.includes("naver.me")) return groups[3];
     return groups[4];
   }
 
   function meaningfulTitle(text){
     const t=String(text||"").replace(/\s+/g," ").trim();
-    if(!t || t.length<4) return "";
+    if(!t || t.length<2) return "";
     if(/^https?:\/\//i.test(t)) return "";
+    if(/^\[cid:/i.test(t)) return "";
+    if(/^\[.*AI가 생성한 콘텐츠/i.test(t)) return "";
     if(/^(자세히 보기|바로가기|click|more)$/i.test(t)) return "";
-    return t;
+    return t.replace(/[‘’']?\s*$/,'').trim();
   }
 
   function decodeQuotedPrintable(str){
@@ -496,8 +498,8 @@
     const disp=h["content-disposition"]||"";
     const cid=String(h["content-id"]||"").replace(/[<>]/g,"");
     const filename=getParam(disp,"filename")||getParam(ct,"name")||"";
-    if(/^text\/html/i.test(ct)){ out.html=decodeMimeBody(body,enc,charset); return; }
-    if(/^text\/plain/i.test(ct)){ out.text=decodeMimeBody(body,enc,charset); return; }
+    if(/^text\/html/i.test(ct)){ if(!out.html) out.html=decodeMimeBody(body,enc,charset); return; }
+    if(/^text\/plain/i.test(ct)){ if(!out.text) out.text=decodeMimeBody(body,enc,charset); return; }
     if(/^image\//i.test(ct)){
       const clean=enc.toLowerCase().includes("base64")?body.replace(/\s+/g,""):"";
       if(clean){
@@ -507,61 +509,54 @@
     }
   }
 
-
+  // Outlook EML의 text/plain에는 제목과 이미지 CID가 모두 실제 링크와 함께 들어옵니다.
+  // 번호나 HTML 표 위치가 아니라 URL 고유키로 제목-썸네일을 직접 결합합니다.
   function extractRecordsFromPlainText(plain, attachmentMap){
-    const buckets=groups.map(()=>({titles:[],images:[]}));
-    const lines=String(plain||"").replace(/\r/g,"").split("\n");
-
-    function groupIndexByUrl(url){
-      const group=classifyUrl(url);
-      const idx=groups.indexOf(group);
-      return idx>=0?idx:groups.length-1;
-    }
+    const lines=String(plain||"").replace(/\r/g,"").split("\n").map(v=>v.trim()).filter(Boolean);
+    const titles=[];
+    const images=[];
+    const standaloneCids=[];
+    let sawTitle=false;
 
     lines.forEach(line=>{
-      const t=line.trim();
-      if(!t) return;
-
-      // 제목<URL> — URL은 채널 구분에만 사용하고 이미지 매칭에는 사용하지 않습니다.
-      const titleMatch=t.match(/^(.*?)<((?:https?:\/\/)[^>]+)>(?:.*)?$/i);
-      if(titleMatch && !/^\[cid:/i.test(t)){
-        const title=meaningfulTitle(titleMatch[1]);
-        if(title){
-          const link=normalizeUrl(titleMatch[2]);
-          buckets[groupIndexByUrl(link)].titles.push({title,link});
-        }
-      }
-
-      // [cid:image...]<URL> — 같은 채널 안에서 등장 순서대로 제목과 결합합니다.
-      const imageMatch=t.match(/^\[cid:([^\]]+)\]\s*<((?:https?:\/\/)[^>]+)>(?:.*)?$/i);
+      const imageMatch=line.match(/^\[cid:([^\]]+)\](?:\s*<((?:https?:\/\/)[^>]+)>)?/i);
       if(imageMatch){
         const cid=imageMatch[1].replace(/[<>]/g,"");
         const filename=cid.split("@")[0];
-        const link=normalizeUrl(imageMatch[2]);
-        buckets[groupIndexByUrl(link)].images.push({
-          image:attachmentMap[cid]||attachmentMap[filename]||"",
-          link
-        });
+        const image=attachmentMap[cid]||attachmentMap[filename]||"";
+        const link=imageMatch[2]?normalizeUrl(imageMatch[2]):"";
+        if(link){ images.push({image,link,key:linkKey(link),group:classifyUrl(link)}); }
+        else if(!sawTitle && image){ standaloneCids.push({cid,image}); }
+        return;
+      }
+
+      const titleMatch=line.match(/^(.*?)<((?:https?:\/\/)[^>]+)>(.*)$/i);
+      if(titleMatch){
+        const title=meaningfulTitle((titleMatch[1]||"")+(titleMatch[3]||""));
+        const link=normalizeUrl(titleMatch[2]);
+        if(title && !/mailto:/i.test(link)){
+          sawTitle=true;
+          titles.push({title,link,key:linkKey(link),group:classifyUrl(link)});
+        }
       }
     });
 
-    const result=[];
-    buckets.forEach((bucket,groupIndex)=>{
-      // 채널별 최대 4개. 같은 채널 안에서는 첫 제목+첫 이미지, 두 번째+두 번째 방식입니다.
-      const count=Math.min(4,Math.max(bucket.titles.length,bucket.images.length));
-      for(let i=0;i<count;i++){
-        const titleItem=bucket.titles[i]||{};
-        const imageItem=bucket.images[i]||{};
-        result.push({
-          title:titleItem.title||"제목을 입력하세요",
-          image:imageItem.image||"",
-          link:titleItem.link||imageItem.link||"",
-          group:groups[groupIndex]
-        });
-      }
+    const usedImages=new Set();
+    const records=[];
+    titles.forEach(titleRec=>{
+      let idx=images.findIndex((img,i)=>!usedImages.has(i)&&img.key===titleRec.key);
+      if(idx<0) idx=images.findIndex((img,i)=>!usedImages.has(i)&&img.group===titleRec.group);
+      const imgRec=idx>=0?images[idx]:null;
+      if(idx>=0) usedImages.add(idx);
+      records.push({
+        title:titleRec.title,
+        image:imgRec?.image||"",
+        link:titleRec.link,
+        group:titleRec.group
+      });
     });
 
-    return result;
+    return {records,standaloneCids};
   }
 
   async function parseEmlFile(file){
@@ -575,14 +570,13 @@
     parseMimeEntity(raw,parsed);
 
     const attachmentMap={};
-    const imageByNo={};
-
     parsed.attachments.forEach(att=>{
       if(att.cid) attachmentMap[att.cid]=att.data;
       if(att.filename) attachmentMap[att.filename]=att.data;
-
-      const m=String(att.filename||"").match(/^image(\d+)\.(?:png|jpe?g|gif|webp)$/i);
-      if(m) imageByNo[Number(m[1])]=att.data;
+      if(att.cid){
+        const short=att.cid.split("@")[0];
+        if(short) attachmentMap[short]=att.data;
+      }
     });
 
     const doc=new DOMParser().parseFromString(parsed.html||"","text/html");
@@ -590,105 +584,46 @@
       const src=img.getAttribute("src")||"";
       if(src.toLowerCase().startsWith("cid:")){
         const key=src.slice(4).replace(/[<>]/g,"");
-        if(attachmentMap[key]) img.setAttribute("src",attachmentMap[key]);
+        const short=key.split("@")[0];
+        const data=attachmentMap[key]||attachmentMap[short];
+        if(data) img.setAttribute("src",data);
       }
     });
 
     const plain=(parsed.text||doc.body.textContent||"").replace(/\r/g,"").trim();
-
-    // 1순위: Outlook의 text/plain에 들어 있는
-    // "제목<URL>" + "[cid:이미지]<URL>" 쌍을 이용합니다.
-    // 이 방식이 HTML 표 구조보다 제목/썸네일 매칭이 정확합니다.
-    let extracted=extractRecordsFromPlainText(plain,attachmentMap);
-
-    // HTML 안에서 실제 링크와 감싸진 이미지를 직접 읽습니다.
-    // 이미지 파일 번호는 주차마다 달라질 수 있으므로 image001~020 같은 번호를 절대 기준으로 사용하지 않습니다.
-    const htmlRecords=[];
-    doc.querySelectorAll('a[href]').forEach(a=>{
-      const href=(a.getAttribute("href")||"").trim();
-      if(!/^https?:\/\//i.test(href)) return;
-      const img=a.querySelector("img");
-      if(!img || !img.src || !img.src.startsWith("data:image")) return;
-      const url=normalizeUrl(href);
-      htmlRecords.push({
-        title:meaningfulTitle(a.textContent),
-        image:img.src,
-        link:url,
-        group:classifyUrl(url)
-      });
-    });
-
-    // plain text에서 얻은 제목/URL과 HTML에서 얻은 실제 썸네일을 URL 기준으로 결합합니다.
-    // URL이 같은 항목이 여러 개일 수 있으므로 사용 여부를 체크해 등장 순서를 유지합니다.
-    const usedHtml=new Set();
-    const merged=[];
-    extracted.forEach(rec=>{
-      let matchIndex=-1;
-      for(let i=0;i<htmlRecords.length;i++){
-        if(usedHtml.has(i)) continue;
-        if(linkKey(htmlRecords[i].link)===linkKey(rec.link)){
-          matchIndex=i; break;
-        }
-      }
-      const htmlRec=matchIndex>=0?htmlRecords[matchIndex]:null;
-      if(matchIndex>=0) usedHtml.add(matchIndex);
-      merged.push({
-        title:rec.title || (htmlRec&&htmlRec.title) || "제목을 입력하세요",
-        image:(htmlRec&&htmlRec.image) || rec.image || "",
-        link:rec.link || (htmlRec&&htmlRec.link) || "",
-        group:rec.group || (htmlRec&&htmlRec.group) || groups[groups.length-1]
-      });
-    });
-
-    // HTML에는 로고·장식·중복 링크 이미지가 많이 포함될 수 있습니다.
-    // 제목과 정확히 연결되지 않은 HTML 이미지는 자동 카드로 추가하지 않습니다.
-    // 이렇게 해야 다른 섹션 이미지가 끼어들거나 카드가 중복되는 현상을 막을 수 있습니다.
+    const extracted=extractRecordsFromPlainText(plain,attachmentMap);
 
     cards=[];
     groups.forEach(group=>{
-      merged.filter(r=>r.group===group).slice(0,4).forEach(r=>cards.push(r));
+      extracted.records.filter(r=>r.group===group).slice(0,4).forEach(r=>cards.push(r));
     });
 
-    // Weekly Keyword는 메일 본문에서 '링크에 감싸지지 않은 첫 번째 대형 이미지'로 찾습니다.
-    // 주차별로 image001, image006, image022 등 번호가 달라도 자동 적용됩니다.
-    const keywordCandidate=[...doc.querySelectorAll("img")].find(img=>{
-      const src=img.src||"";
-      if(!src.startsWith("data:image")) return false;
-      if(img.closest("a[href]")) return false;
-      const w=parseInt(img.getAttribute("width")||img.width||0,10);
-      const h=parseInt(img.getAttribute("height")||img.height||0,10);
-      return w>=500 || h>=500;
-    }) || [...doc.querySelectorAll("img")].find(img=>{
-      const src=img.src||"";
-      return src.startsWith("data:image") && !img.closest("a[href]");
-    });
-    if(keywordCandidate) keywordImage=await cropKeywordTop(keywordCandidate.src);
+    // 메일 상단의 링크 없는 대형 이미지 중 가장 큰 파일을 Weekly Keyword로 사용합니다.
+    if(extracted.standaloneCids.length){
+      const best=extracted.standaloneCids.sort((a,b)=>(b.image.length||0)-(a.image.length||0))[0];
+      if(best?.image) keywordImage=await cropKeywordTop(best.image);
+    }else{
+      const candidates=[...doc.querySelectorAll("img")].filter(img=>{
+        const src=img.src||"";
+        return src.startsWith("data:image")&&!img.closest("a[href]");
+      });
+      candidates.sort((a,b)=>(b.src.length||0)-(a.src.length||0));
+      if(candidates[0]) keywordImage=await cropKeywordTop(candidates[0].src);
+    }
 
     $("#mailText").value=plain;
 
     const subject=decodeHeaderValue(topHeaders["subject"]||"").trim();
-    if(subject) $("#reportTitle").value=subject.replace(/\([^)]*\)/g,"").trim()||"커머스 트렌드";
+    if(subject) $("#reportTitle").value=subject.replace(/\([^)]*\)/g,"").trim()||"Trend Report";
 
     const date=new Date(topHeaders["date"]||Date.now());
     if(!isNaN(date)){
-      $("#reportDate").value=[
-        date.getFullYear(),
-        String(date.getMonth()+1).padStart(2,"0"),
-        String(date.getDate()).padStart(2,"0")
-      ].join("-");
+      $("#reportDate").value=[date.getFullYear(),String(date.getMonth()+1).padStart(2,"0"),String(date.getDate()).padStart(2,"0")].join("-");
     }
 
-    const textLines=cleanLines(plain);
-    let textIndex=0;
-    cards.forEach(c=>{
-      if(c.title==="제목을 입력하세요" && textLines[textIndex]) c.title=textLines[textIndex++];
-    });
-
     const missingImages=cards.filter(c=>!c.image).length;
-    $("#emlStatus").textContent=
-      `완료: 제목·링크·이미지가 일치한 카드 ${cards.length}개를 찾았습니다.`+
-      (missingImages?` 썸네일 미연결 ${missingImages}개가 있습니다.`:"")+
-      `\n제목·링크·썸네일을 메일 안의 실제 연결 관계로 자동 매칭했습니다.`;
+    $("#emlStatus").textContent=`완료: 카드 ${cards.length}개 / 이미지 연결 ${cards.length-missingImages}개`+
+      (missingImages?` / 미연결 ${missingImages}개`:"");
     render();
   }
 
