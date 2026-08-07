@@ -868,9 +868,11 @@
     const v=$("#reportDate").value||new Date().toISOString().slice(0,10);
     $("#assetFolder").value=v;
   }
-  $("#setDateFolder").onclick=setDateFolder;
+  const setDateFolderBtn=$("#setDateFolder");
+  if(setDateFolderBtn) setDateFolderBtn.onclick=setDateFolder;
 
-  $("#downloadAssets").onclick=async()=>{
+  const downloadAssetsBtn=$("#downloadAssets");
+  if(downloadAssetsBtn) downloadAssetsBtn.onclick=async()=>{
     const status=$("#githubStatus"), plan=assetPlan();
     if(!plan.length){alert("EML에서 불러온 이미지가 없어요.");return;}
     if(!cleanFolder()) setDateFolder();
