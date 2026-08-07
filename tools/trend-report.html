@@ -232,11 +232,11 @@
 
     <div class="section" id="htmlResultSection">
       <h2>7. 생성 결과</h2>
-      <div class="status">생성된 파트너센터 HTML을 확인한 뒤 다운로드하세요.</div>
+      <div class="status">미리보기 디자인을 이미지로 유지하고, 링크만 얹은 가벼운 HTML 패키지를 생성합니다.</div>
       <textarea id="resultHtml" readonly style="margin-top:10px;min-height:180px" placeholder="생성된 파트너센터 HTML이 여기에 표시됩니다."></textarea>
       <div class="btns" style="margin-top:10px">
         <button id="copyHtml" class="primary" disabled>HTML 전체 복사</button>
-        <button id="downloadHtml" class="green" disabled>HTML 다운로드</button>
+        <button id="downloadHtml" class="green" disabled>HTML 패키지 다운로드</button>
       </div>
     </div>
 
@@ -942,97 +942,89 @@
     return `<img src="${data}"${usemap} alt="${escAttr(label||"")}" width="${canvas.width}" height="${canvas.height}" style="display:block;width:100%;height:auto;border:0;margin:0;padding:0">${map}`;
   }
 
-  function pcYoutubeThumb(url){
-    try{
-      const u=new URL(url);
-      let id="";
-      if(u.hostname.includes("youtu.be")) id=u.pathname.split("/").filter(Boolean)[0]||"";
-      else if(u.hostname.includes("youtube.com")){
-        id=u.searchParams.get("v")||"";
-        if(!id){ const m=u.pathname.match(/\/(?:shorts|embed)\/([^/?#]+)/i); if(m) id=m[1]; }
-      }
-      return id?`https://i.ytimg.com/vi/${encodeURIComponent(id)}/hqdefault.jpg`:"";
-    }catch(e){ return ""; }
+  let partnerPackageAssets=[];
+
+  function relTop(el,rootRect){
+    return Math.max(0,el.getBoundingClientRect().top-rootRect.top);
   }
 
-  function pcPlatform(group){
-    if(group==="YouTube") return {label:"YouTube",badge:"▶",bg:"#fff4f4",fg:"#e62117"};
-    if(group==="TikTok") return {label:"TikTok",badge:"♪",bg:"#f5f5f5",fg:"#111111"};
-    if(group==="Instagram & SNS") return {label:"Instagram & SNS",badge:"◎",bg:"#fff1f7",fg:"#d62976"};
-    if(group==="네이버TV 인기100") return {label:"네이버TV 인기100",badge:"N",bg:"#effff4",fg:"#03c75a"};
-    return {label:"해외 인기템",badge:"↗",bg:"#f1f6ff",fg:"#0870d2"};
+  function relBottom(el,rootRect){
+    return Math.max(0,el.getBoundingClientRect().bottom-rootRect.top);
   }
 
-  function pcCard(c){
-    const p=pcPlatform(c.group);
-    const thumb=pcYoutubeThumb(c.link||"");
-    const href=escAttr(c.link||"#");
-    const title=esc(c.title||"콘텐츠");
-    const media=thumb
-      ? `<img src="${escAttr(thumb)}" alt="" style="display:block;width:100%;aspect-ratio:16/9;object-fit:cover;border:0;background:#f2f2f2">`
-      : `<div style="height:220px;background:${p.bg};display:flex;align-items:center;justify-content:center;text-align:center;color:${p.fg};font-size:52px;font-weight:1000;letter-spacing:-.04em">${p.badge}<span style="display:block;font-size:20px;margin-left:12px">${esc(p.label)}</span></div>`;
-    return `<a href="${href}" target="_blank" rel="noopener noreferrer" style="display:block;color:#111;text-decoration:none">${media}<div style="font-family:Pretendard,'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;font-size:20px;line-height:1.5;font-weight:900;letter-spacing:-.04em;padding:12px 0 0;word-break:keep-all">${title}</div></a>`;
+  function canvasBlob(canvas,type="image/jpeg",quality=.92){
+    return new Promise((resolve,reject)=>{
+      canvas.toBlob(blob=>blob?resolve(blob):reject(new Error("이미지 저장에 실패했습니다.")),type,quality);
+    });
   }
 
-  function pcGroup(group,list){
-    const p=pcPlatform(group);
-    let rows="";
-    for(let i=0;i<list.length;i+=2){
-      const a=list[i],b=list[i+1];
-      rows+=`<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;border-collapse:collapse;margin:0 0 34px"><tr>`+
-        `<td width="50%" valign="top" style="width:50%;padding:0 12px 0 0">${pcCard(a)}</td>`+
-        `<td width="50%" valign="top" style="width:50%;padding:0 0 0 12px">${b?pcCard(b):""}</td>`+
-      `</tr></table>`;
-    }
-    return `<div style="margin:36px 0 0;padding:0">`+
-      `<div style="min-height:54px;border-bottom:4px solid #00c83c;padding:0 0 8px;font-family:Pretendard,'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;font-size:26px;font-weight:1000;letter-spacing:-.045em;display:flex;align-items:center">`+
-      `<span style="display:inline-block;width:34px;height:34px;line-height:34px;text-align:center;margin-right:9px;border-radius:9px;background:${p.bg};color:${p.fg};font-size:20px">${p.badge}</span>${esc(group)}</div>`+
-      `<div style="padding-top:18px">${rows}</div></div>`;
-  }
-
-  function pcPill(text){
-    return `<div style="position:relative;z-index:2;text-align:center;height:0;overflow:visible">`+
-      `<div style="display:inline-block;transform:translateY(-50%);min-width:260px;padding:14px 48px;border-radius:999px;background:linear-gradient(90deg,#00c83c 0 45%,#0789d8 72%);color:#fff;font-family:Pretendard,'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;font-size:26px;line-height:1.2;font-weight:1000;letter-spacing:-.03em">${esc(text)}</div></div>`;
-  }
-
-  function pcFooter(){
-    return `<div style="background:#050505;color:#0870d2;text-align:center;padding:54px 56px 64px;font-family:Pretendard,'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif">`+
-      `<div style="font-size:24px;font-weight:900;margin:0 0 26px">오늘 정리해 드린 트렌드, 어떠셨나요?</div>`+
-      `<div style="font-size:20px;font-weight:800;line-height:1.55;margin:0 0 34px">판매자님들의 기획에 작은 영감이 되었길 바라며<br>다음 주에도 새로운 소식 가득 들고 찾아올게요! ✨</div>`+
-      `<div style="max-width:680px;margin:0 auto;border-radius:18px;padding:22px 24px 30px;background:linear-gradient(135deg,#f7edf7,#e8f2ff 55%,#e9ffd9);color:#0870d2">`+
-        `<div style="font-size:22px;font-weight:1000;margin-bottom:24px">↓ 더 많은 판매 꿀팁이 궁금하다면 ↓</div>`+
-        `<div style="border:3px solid #5aa3ee;border-radius:18px;background:rgba(255,255,255,.18);overflow:hidden">`+
-          `<div style="height:44px;border-bottom:3px solid #5aa3ee;text-align:right;padding:4px 16px 0;font-size:24px;font-weight:700;color:#5aa3ee">— &nbsp; □ &nbsp; ×</div>`+
-          `<div style="padding:48px 16px 52px;font-size:54px;font-weight:1000;letter-spacing:-.05em">G마켓 파트너센터 <span style="font-size:44px">↖</span></div>`+
-        `</div></div></div>`;
+  function mapHtmlForSlice(preview,top,bottom,ratio,index){
+    const areas=anchorAreas(preview,top,bottom,ratio);
+    if(!areas.length) return {usemap:"",map:""};
+    const mapName=`trendMap${index}`;
+    const map=`<map name="${mapName}">${areas.map(x=>`<area shape="rect" coords="${x.coords}" href="${escAttr(x.href)}" target="_blank" rel="noopener noreferrer" alt="">`).join("")}</map>`;
+    return {usemap:` usemap="#${mapName}"`,map};
   }
 
   async function buildPartnerHtml(){
     if(!cards.length) throw new Error("먼저 EML을 변환해 주세요.");
-    const status=$("#htmlStatus");
-    status.textContent="파트너센터용 템플릿 HTML 만드는 중...";
+    const status=$("#htmlStatus"), preview=$("#preview");
+    status.textContent="미리보기 디자인을 이미지형 HTML로 변환하는 중...";
 
-    const date=esc(formatDate($("#reportDate").value));
-    const desc=esc($("#reportDesc").value||"").replace(/\n/g,"<br>");
-    const weekly=esc($("#keywordText").value||"").replace(/\n/g,"<br>");
+    await waitForImages(preview);
+    await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
 
-    const cover=`<div style="min-height:720px;padding:48px 64px 56px;position:relative;background:#fff;font-family:Pretendard,'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;overflow:hidden">`+
-      `<div style="text-align:right;color:#0870d2;font-size:14px;font-weight:800">${date}</div>`+
-      `<div style="margin-top:150px;text-align:center;color:#0570cf;font-size:98px;line-height:1.06;font-weight:1000;letter-spacing:-.055em">Trend<br>Report`+
-      `<div style="max-width:650px;margin:48px auto 0;color:#0870d2;font-size:26px;line-height:1.6;letter-spacing:-.03em;font-weight:800">${desc}</div></div>`+
-      `<div style="position:absolute;left:0;right:0;bottom:0;height:3px;background:#00c83c"></div></div>`;
+    const pr=preview.getBoundingClientRect();
+    const rendered=await html2canvas(preview,{
+      scale:1.35,
+      useCORS:true,
+      allowTaint:true,
+      backgroundColor:"#ffffff",
+      logging:false,
+      scrollX:0,
+      scrollY:0,
+      windowWidth:document.documentElement.scrollWidth,
+      windowHeight:document.documentElement.scrollHeight
+    });
+    const ratio=rendered.width/pr.width;
+    const keyword=$(".keyword"), footer=preview.querySelector(".footer");
+    const bars=[...preview.querySelectorAll(".bar")];
+    const groupEls=[...preview.querySelectorAll("#pvMedia .group")];
+    const slices=[];
 
-    const weeklyBody=`<div style="padding:58px 64px 52px;background:#fff;font-family:Pretendard,'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif">`+
-      (weekly?`<div style="white-space:normal;line-height:1.75;font-size:18px;color:#111">${weekly}</div>`:`<div style="padding:44px 24px;border:1px solid #e6e9ee;background:#f8fafc;text-align:center;color:#667085;font-size:18px;line-height:1.6">Weekly Keyword 이미지는 메일 첨부(CID) 방식이라 파트너센터용 HTML에는 직접 넣지 않습니다.<br>필요한 키워드 문구가 있으면 변환기에서 입력해 주세요.</div>`)+`</div>`;
+    // 1) 표지 + Weekly Keyword 영역
+    if(keyword) slices.push({top:0,bottom:relBottom(keyword,pr),label:"cover-weekly"});
 
-    const groupsHtml=groups.map(g=>{
-      const list=cards.filter(c=>c.group===g).slice(0,4);
-      return list.length?pcGroup(g,list):"";
-    }).join("");
+    // 2) New Media: 첫 그룹에는 New Media 바까지 함께 포함
+    groupEls.forEach((g,i)=>{
+      const top=i===0 && bars[1] ? relTop(bars[1],pr) : relTop(g,pr);
+      slices.push({top,bottom:relBottom(g,pr),label:`media-${String(i+1).padStart(2,"0")}`});
+    });
 
-    const media=`<div style="padding:58px 62px 78px;background:#fff;font-family:Pretendard,'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif">${groupsHtml}</div>`;
+    // 3) Footer
+    if(footer) slices.push({top:relTop(footer,pr),bottom:relBottom(footer,pr),label:"footer"});
 
-    return `<div class="trend-report-post" style="width:100%;max-width:980px;margin:0 auto;background:#fff">${cover}${pcPill("Weekly Keyword")}${weeklyBody}${pcPill("New Media")}${media}${pcFooter()}</div><p><br></p><p><br></p>`;
+    partnerPackageAssets=[];
+    const htmlParts=[];
+    for(let i=0;i<slices.length;i++){
+      const s=slices[i];
+      const y=Math.max(0,Math.round(s.top*ratio));
+      const h=Math.max(1,Math.round((s.bottom-s.top)*ratio));
+      const canvas=document.createElement("canvas");
+      canvas.width=rendered.width;
+      canvas.height=h;
+      const ctx=canvas.getContext("2d");
+      ctx.fillStyle="#fff";
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.drawImage(rendered,0,y,rendered.width,h,0,0,rendered.width,h);
+      const name=`${String(i+1).padStart(2,"0")}-${s.label}.jpg`;
+      const blob=await canvasBlob(canvas,"image/jpeg",.92);
+      partnerPackageAssets.push({name,blob});
+      const maps=mapHtmlForSlice(preview,s.top,s.bottom,ratio,i+1);
+      htmlParts.push(`<img src="assets/${name}"${maps.usemap} alt="" width="${canvas.width}" height="${canvas.height}" style="display:block;width:100%;height:auto;border:0;margin:0;padding:0">${maps.map}`);
+    }
+
+    return `<div class="trend-report-post" style="width:100%;max-width:980px;margin:0 auto;background:#fff">${htmlParts.join("")}</div><p><br></p><p><br></p>`;
   }
 
   async function copyText(text){
@@ -1050,7 +1042,7 @@
       $("#resultHtml").value=html;
       $("#downloadHtml").disabled=false;
       $("#copyHtml").disabled=false;
-      status.textContent="HTML 생성 완료. 아래 ‘7. 생성 결과’에서 복사하거나 다운로드하세요.";
+      status.textContent="이미지형 HTML 생성 완료. 아래 ‘7. 생성 결과’에서 확인 후 패키지로 다운로드하세요.";
       $("#htmlResultSection").scrollIntoView({behavior:"smooth",block:"start"});
       btn.textContent="HTML 생성 완료";
       setTimeout(()=>btn.textContent="파트너센터 HTML 생성",1400);
@@ -1069,34 +1061,33 @@
     $("#htmlStatus").textContent="HTML 전체를 복사했습니다.";
   };
 
-  $("#downloadHtml").onclick=()=>{
+  $("#downloadHtml").onclick=async()=>{
     const html=$("#resultHtml").value;
     if(!html){alert("먼저 파트너센터 HTML을 생성해 주세요.");return;}
+    if(!partnerPackageAssets.length){alert("이미지 패키지가 없습니다. HTML을 다시 생성해 주세요.");return;}
 
-    // 생성 결과만 저장하면 브라우저/파트너센터에서 문서로 열 때 깨질 수 있어
-    // 최소 문서 골격을 감싸 완전한 HTML 파일로 저장합니다.
     const fullHtml=`<!doctype html>
 <html lang="ko">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Trend Report</title>
+<style>html,body{margin:0;padding:0;background:#fff}img{display:block;max-width:100%;height:auto}</style>
 </head>
-<body style="margin:0;padding:0;background:#fff">
+<body>
 ${html}
 </body>
 </html>`;
 
-    const blob=new Blob([fullHtml],{type:"text/html;charset=utf-8"});
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement("a");
-    a.href=url;
-    a.download="trend-report-partnercenter.html";
-    a.style.display="none";
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(()=>{a.remove();URL.revokeObjectURL(url)},1500);
-    $("#htmlStatus").textContent="HTML 파일을 정상 저장했습니다.";
+    const zip=new JSZip();
+    zip.file("trend-report.html",fullHtml);
+    partnerPackageAssets.forEach(a=>zip.file("assets/"+a.name,a.blob));
+    $("#htmlStatus").textContent="HTML + 이미지 패키지 압축 중...";
+    const out=await zip.generateAsync({type:"blob",compression:"DEFLATE",compressionOptions:{level:6}});
+    const url=URL.createObjectURL(out),a=document.createElement("a");
+    a.href=url;a.download="trend-report-partnercenter.zip";document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1500);
+    $("#htmlStatus").textContent="완료: 가벼운 HTML 1개 + 이미지 파일을 ZIP으로 저장했습니다.";
   };
 
   today();
