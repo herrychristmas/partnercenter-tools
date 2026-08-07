@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Trend Report Generator v17</title>
+<title>Trend Report Generator v20 · GitHub</title>
 <style>
   :root{
     --green:#00c83c;
@@ -144,8 +144,8 @@
 <body>
 <div class="app">
   <aside class="panel">
-    <h1>Trend Report Generator</h1>
-    <div class="sub">Outlook에서 저장한 EML 파일을 넣으면 제목·썸네일·링크를 자동으로 불러옵니다. 변환 후 필요한 부분만 확인해 주세요.</div>
+    <h1>Trend Report Generator <small style="font-size:11px;color:#2890ff">GitHub V20</small></h1>
+    <div class="sub">EML을 넣으면 제목·이미지·링크를 자동 추출합니다. 이미지 ZIP만 GitHub에 올린 뒤 가벼운 파트너센터 HTML을 복사하세요.</div>
 
     <div class="section">
       <h2>1. Outlook 메일 파일 자동 임시 저장 불러오기</h2>
@@ -167,14 +167,23 @@
         <button id="saveLocal" class="ghost">작업 임시 저장</button>
         <button id="loadLocal" class="ghost">임시 저장 불러오기</button>
         <button id="exportPng" class="green">PNG 내보내기</button>
-        <button id="exportHtml" class="ghost">PC 확인용 HTML 저장</button>
-        <button id="exportPartnerJpg" class="primary">파트너센터용 JPG 저장</button>
+        <button id="downloadAssets" class="green">이미지 ZIP 저장</button>
+        <button id="copyGithubHtml" class="primary">파트너센터 HTML 복사</button>
       </div>
-      <div class="status">※ 파트너센터에는 ‘파트너센터용 JPG 저장’ 후 이미지 버튼으로 업로드하세요. Base64 HTML 붙여넣기는 저장 오류와 느려짐의 원인이 됩니다.</div>
     </div>
 
     <div class="section">
-      <h2>3. 기본 정보</h2>
+      <h2>3. GitHub 이미지 경로</h2>
+      <input id="githubBase" type="text" value="https://herrychristmas.github.io/partnercenter-tools/assets/trend-report" placeholder="GitHub Pages 이미지 기본 주소">
+      <div class="row" style="margin-top:8px">
+        <input id="assetFolder" type="text" placeholder="업로드 폴더명 예: 2026-08-07">
+        <button id="setDateFolder" class="ghost">날짜로 설정</button>
+      </div>
+      <div id="githubStatus" class="status">① EML 변환 → ② 이미지 ZIP 저장 → ③ GitHub assets/trend-report/폴더명에 업로드 → ④ HTML 복사</div>
+    </div>
+
+    <div class="section">
+      <h2>4. 기본 정보</h2>
       <div class="row">
         <input id="reportTitle" type="text" value="Trend Report" placeholder="리포트 제목">
         <input id="reportDate" type="date">
@@ -186,7 +195,7 @@
     </div>
 
     <div class="section">
-      <h2>4. Weekly Keyword 이미지</h2>
+      <h2>5. Weekly Keyword 이미지</h2>
       <div id="keywordDrop" class="drop">
         키워드 이미지 클릭·드래그·붙여넣기
         <small>Weekly Keyword 영역을 캡처해 그대로 넣을 수 있습니다.</small>
@@ -201,7 +210,7 @@
     </div>
 
     <div class="section">
-      <h2>5. 메일 본문 붙여넣기</h2>
+      <h2>6. 메일 본문 붙여넣기</h2>
       <textarea id="mailText" placeholder="EML 자동 변환이 어려울 때만 메일 본문을 복사해 붙여넣어 주세요."></textarea>
       <div class="row" style="margin-top:8px">
         <select id="pairMode">
@@ -218,7 +227,7 @@
     </div>
 
     <div class="section">
-      <h2>6. 카드 편집</h2>
+      <h2>7. 카드 편집</h2>
       <div class="btns" style="margin-bottom:10px">
         <button id="addCard" class="ghost">콘텐츠 카드 추가</button>
         <button id="clearCards" class="danger">카드 전체 삭제</button>
@@ -254,6 +263,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script>
 (function(){
   const $ = s => document.querySelector(s);
@@ -835,119 +845,116 @@
     a.click();
   };
 
-  function inlineClone(source){
-    const clone=source.cloneNode(true);
-    const sourceEls=[source].concat(Array.from(source.querySelectorAll("*")));
-    const cloneEls=[clone].concat(Array.from(clone.querySelectorAll("*")));
-    const keep=[
-      "display","position","width","max-width","min-width","height","min-height",
-      "margin","padding","box-sizing","background","background-color","background-image",
-      "background-size","background-position","background-repeat","border","border-radius",
-      "box-shadow","color","font-family","font-size","font-weight","font-style","line-height",
-      "letter-spacing","text-align","text-decoration","white-space","word-break","overflow",
-      "object-fit","vertical-align","gap","grid-template-columns","flex-direction","align-items",
-      "justify-content","flex-wrap"
-    ];
-    sourceEls.forEach((el,i)=>{
-      const target=cloneEls[i];
-      if(!target||el.nodeType!==1) return;
-      const cs=getComputedStyle(el);
-      const styles=[];
-      keep.forEach(prop=>{
-        const value=cs.getPropertyValue(prop);
-        if(value) styles.push(`${prop}:${value}`);
-      });
-      target.setAttribute("style",styles.join(";"));
-      target.removeAttribute("class");
-      target.removeAttribute("id");
-    });
-    clone.querySelectorAll("button,input,textarea,select,script").forEach(el=>el.remove());
-    return clone;
+  function dataExt(data){
+    const m=String(data||"").match(/^data:image\/([a-zA-Z0-9.+-]+);/);
+    if(!m) return "jpg";
+    const x=m[1].toLowerCase();
+    return x.includes("png")?"png":x.includes("webp")?"webp":x.includes("gif")?"gif":"jpg";
   }
 
-  $("#exportHtml").onclick=()=>{
-    const previewClone=$("#preview").cloneNode(true);
-    previewClone.removeAttribute("id");
-    previewClone.style.width="980px";
-    previewClone.style.maxWidth="100%";
-    previewClone.style.margin="0 auto";
-    previewClone.style.boxShadow="none";
+  function assetPlan(){
+    const out=[];
+    if(keywordImage) out.push({kind:"keyword",name:`keyword.${dataExt(keywordImage)}`,src:keywordImage});
+    let n=1;
+    cards.forEach((c,i)=>{
+      if(!c.image) return;
+      out.push({kind:"card",cardIndex:i,name:`image-${String(n++).padStart(2,"0")}.${dataExt(c.image)}`,src:c.image});
+    });
+    return out;
+  }
 
-    const css=Array.from(document.querySelectorAll("style"))
-      .map(style=>style.textContent)
-      .join("\n");
+  function cleanBase(){
+    return ($("#githubBase").value||"").trim().replace(/\/+$/,"");
+  }
+  function cleanFolder(){
+    return ($("#assetFolder").value||"").trim().replace(/^\/+|\/+$/g,"").replace(/[^a-zA-Z0-9._-]/g,"-");
+  }
+  function publicUrl(name){
+    const base=cleanBase(), folder=cleanFolder();
+    return `${base}/${folder}/${encodeURIComponent(name)}`;
+  }
+  function setDateFolder(){
+    const v=$("#reportDate").value||new Date().toISOString().slice(0,10);
+    $("#assetFolder").value=v;
+  }
+  $("#setDateFolder").onclick=setDateFolder;
 
-    const doc=`<!doctype html>
-<html lang="ko">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${esc($("#reportTitle").value||"Trend Report")}</title>
-<style>
-html,body{margin:0;padding:0;background:#fff}
-body{font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",Arial,sans-serif}
-${css}
-.app,.panel,.preview-wrap{display:block!important}
-.preview-wrap{padding:0!important}
-</style>
-</head>
-<body>
-${previewClone.outerHTML}
-</body>
-</html>`;
-
-    const blob=new Blob(["\ufeff",doc],{type:"text/html;charset=utf-8"});
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement("a");
-    a.download="trend-report.html";
-    a.href=url;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(()=>URL.revokeObjectURL(url),1500);
-  };
-
-  $("#exportPartnerJpg").onclick=async()=>{
-    const btn=$("#exportPartnerJpg");
-    const oldText=btn.textContent;
+  $("#downloadAssets").onclick=async()=>{
+    const status=$("#githubStatus"), plan=assetPlan();
+    if(!plan.length){alert("EML에서 불러온 이미지가 없어요.");return;}
+    if(!cleanFolder()) setDateFolder();
+    status.textContent="이미지 ZIP 만드는 중...";
     try{
-      btn.disabled=true;
-      btn.textContent="JPG 만드는 중...";
-      const node=$("#preview");
-      const rendered=await html2canvas(node,{
-        scale:1.5,
-        useCORS:true,
-        allowTaint:true,
-        backgroundColor:"#ffffff",
-        logging:false,
-        windowWidth:980
-      });
-      const maxWidth=860;
-      const ratio=Math.min(1,maxWidth/rendered.width);
-      const canvas=document.createElement("canvas");
-      canvas.width=Math.round(rendered.width*ratio);
-      canvas.height=Math.round(rendered.height*ratio);
-      const ctx=canvas.getContext("2d");
-      ctx.fillStyle="#ffffff";
-      ctx.fillRect(0,0,canvas.width,canvas.height);
-      ctx.drawImage(rendered,0,0,canvas.width,canvas.height);
+      const zip=new JSZip();
+      const manifest=[];
+      for(const item of plan){
+        if(!String(item.src).startsWith("data:")){
+          manifest.push(`${item.name}	외부 이미지라 ZIP 제외	${item.src}`);
+          continue;
+        }
+        const blob=await (await fetch(item.src)).blob();
+        zip.file(item.name,blob);
+        manifest.push(`${item.name}	${item.kind}`);
+      }
+      zip.file("UPLOAD_GUIDE.txt",`GitHub 업로드 위치:
+assets/trend-report/${cleanFolder()}/
+
+파일 목록:
+${manifest.join("\n")}`);
+      const blob=await zip.generateAsync({type:"blob",compression:"DEFLATE",compressionOptions:{level:6}});
       const a=document.createElement("a");
-      a.download="partnercenter-trend-report.jpg";
-      a.href=canvas.toDataURL("image/jpeg",0.86);
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      alert("저장된 JPG를 파트너센터 에디터의 이미지 버튼으로 업로드해 주세요. HTML 소스 붙여넣기보다 훨씬 빠르고 저장 오류가 없습니다.");
+      a.href=URL.createObjectURL(blob);
+      a.download=`trend-report-images-${cleanFolder()}.zip`;
+      document.body.appendChild(a);a.click();a.remove();
+      setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+      status.textContent=`완료: ZIP 안의 이미지 ${plan.length}개를 GitHub assets/trend-report/${cleanFolder()}/ 폴더에 올려주세요.`;
     }catch(err){
-      console.error(err);
-      alert("JPG 생성 중 오류가 발생했어요. 이미지가 모두 표시된 뒤 다시 눌러주세요.");
-    }finally{
-      btn.disabled=false;
-      btn.textContent=oldText;
+      console.error(err);status.textContent="ZIP 생성 실패: "+err.message;
     }
   };
 
+  function buildPartnerHtml(){
+    if(!cleanFolder()) setDateFolder();
+    const plan=assetPlan(), byCard=new Map();
+    let keywordName="";
+    plan.forEach(x=>{if(x.kind==="keyword") keywordName=x.name; else byCard.set(x.cardIndex,x.name)});
+    const title=esc($("#reportTitle").value||"Trend Report");
+    const desc=esc($("#reportDesc").value||"").replace(/\n/g,"<br>");
+    const date=esc(formatDate($("#reportDate").value));
+    let groupHtml="";
+    groups.forEach(group=>{
+      const indexed=cards.map((c,i)=>({c,i})).filter(x=>x.c.group===group);
+      if(!indexed.length)return;
+      let rows="";
+      for(let i=0;i<indexed.length;i+=2){
+        const cells=[indexed[i],indexed[i+1]].map(obj=>{
+          if(!obj)return '<td width="50%" valign="top">&nbsp;</td>';
+          const c=obj.c, name=byCard.get(obj.i), img=name?`<img src="${publicUrl(name)}" width="370" border="0" alt="${esc(c.title)}" style="display:block;width:100%;max-width:370px;height:auto;border:0">`:"";
+          const content=`${img}<div style="padding-top:10px;font-family:Malgun Gothic,Arial,sans-serif;font-size:16px;line-height:1.45;color:#111111;font-weight:bold">${esc(c.title)}</div>`;
+          return `<td width="50%" valign="top" style="padding:0 10px 28px">${c.link?`<a href="${esc(c.link)}" target="_blank" rel="noopener noreferrer" style="text-decoration:none;color:#111111">${content}</a>`:content}</td>`;
+        }).join("");
+        rows+=`<tr>${cells}</tr>`;
+      }
+      groupHtml+=`<table width="100%" border="0" cellspacing="0" cellpadding="0" role="presentation" style="width:100%;border-collapse:collapse"><tr><td colspan="2" style="padding:32px 10px 12px;border-bottom:4px solid #00c83c;font-family:Malgun Gothic,Arial,sans-serif;font-size:24px;font-weight:bold;color:#111111">${esc(group)}</td></tr><tr><td colspan="2" height="20">&nbsp;</td></tr>${rows}</table>`;
+    });
+    const keyword=keywordName?`<tr><td align="center" style="padding:28px 34px 44px"><img src="${publicUrl(keywordName)}" width="792" border="0" alt="Weekly Keyword" style="display:block;width:100%;max-width:792px;height:auto;border:0"></td></tr>`:"";
+    return `<table width="860" align="center" border="0" cellspacing="0" cellpadding="0" role="presentation" style="width:860px;max-width:100%;margin:0 auto;border-collapse:collapse;background:#ffffff"><tr><td align="center" style="padding:54px 34px 46px;background:#f6f8fb;font-family:Malgun Gothic,Arial,sans-serif"><div style="font-size:13px;color:#0789d8;font-weight:bold;text-align:right">${date}</div><div style="font-size:64px;line-height:1.05;color:#0570cf;font-weight:bold;text-align:center;padding-top:52px">${title}</div><div style="font-size:20px;line-height:1.6;color:#0870d2;font-weight:bold;text-align:center;padding-top:30px">${desc}</div></td></tr><tr><td align="center" bgcolor="#0789d8" style="padding:13px 20px;background:#0789d8;font-family:Malgun Gothic,Arial,sans-serif;font-size:22px;color:#ffffff;font-weight:bold">Weekly Keyword</td></tr>${keyword}<tr><td align="center" bgcolor="#0789d8" style="padding:13px 20px;background:#0789d8;font-family:Malgun Gothic,Arial,sans-serif;font-size:22px;color:#ffffff;font-weight:bold">New Media</td></tr><tr><td style="padding:18px 34px 50px">${groupHtml}</td></tr></table>`;
+  }
+
+  async function copyText(text){
+    try{await navigator.clipboard.writeText(text)}catch(e){
+      const t=document.createElement("textarea");t.value=text;t.style.position="fixed";t.style.left="-9999px";document.body.appendChild(t);t.select();document.execCommand("copy");t.remove();
+    }
+  }
+  $("#copyGithubHtml").onclick=async()=>{
+    if(!cleanFolder())setDateFolder();
+    const html=buildPartnerHtml();
+    await copyText(html);
+    $("#githubStatus").textContent=`HTML 복사 완료. GitHub 이미지 업로드가 끝난 뒤 파트너센터 소스 모드에 붙여넣으세요. (${cleanFolder()})`;
+  };
+
   today();
+  setDateFolder();
   render();
 })();
 </script>
