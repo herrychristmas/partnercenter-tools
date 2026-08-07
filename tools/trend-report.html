@@ -236,7 +236,7 @@
       <textarea id="resultHtml" readonly style="margin-top:10px;min-height:180px" placeholder="생성된 파트너센터 HTML이 여기에 표시됩니다."></textarea>
       <div class="btns" style="margin-top:10px">
         <button id="copyHtml" class="primary" disabled>HTML 전체 복사</button>
-        <button id="downloadHtml" class="green" disabled>HTML 패키지 다운로드</button>
+        <button id="downloadHtml" class="green" disabled>HTML 다운로드</button>
       </div>
     </div>
 
@@ -860,24 +860,6 @@
     a.click();
   };
 
-  function dataExt(data){
-    const m=String(data||"").match(/^data:image\/([a-zA-Z0-9.+-]+);/);
-    if(!m) return "jpg";
-    const x=m[1].toLowerCase();
-    return x.includes("png")?"png":x.includes("webp")?"webp":x.includes("gif")?"gif":"jpg";
-  }
-
-  function assetPlan(){
-    const out=[];
-    if(keywordImage) out.push({kind:"keyword",name:`keyword.${dataExt(keywordImage)}`,src:keywordImage});
-    let n=1;
-    cards.forEach((c,i)=>{
-      if(!c.image) return;
-      out.push({kind:"card",cardIndex:i,name:`image-${String(n++).padStart(2,"0")}.${dataExt(c.image)}`,src:c.image});
-    });
-    return out;
-  }
-
   function waitForImages(root){
     const imgs=[...root.querySelectorAll("img")].filter(img=>img.src && !img.complete);
     return Promise.all(imgs.map(img=>new Promise(resolve=>{
@@ -890,95 +872,47 @@
     return esc(v).replace(/`/g,"&#96;");
   }
 
-  function previewY(el,previewRect){
-    const r=el.getBoundingClientRect();
-    return r.bottom-previewRect.top;
+  function pct(n,total){
+    return total>0?Math.max(0,Math.min(100,(n/total)*100)):0;
   }
 
-  function anchorAreas(preview,sliceTop,sliceBottom,scale){
-    const pr=preview.getBoundingClientRect();
-    return [...preview.querySelectorAll("a[href]")].map(a=>{
-      const r=a.getBoundingClientRect();
-      const top=r.top-pr.top, bottom=r.bottom-pr.top;
-      if(bottom<=sliceTop || top>=sliceBottom) return null;
-      const x1=Math.max(0,r.left-pr.left);
-      const y1=Math.max(sliceTop,top)-sliceTop;
-      const x2=Math.min(pr.width,r.right-pr.left);
-      const y2=Math.min(sliceBottom,bottom)-sliceTop;
-      if(x2<=x1 || y2<=y1) return null;
-      return {
-        href:a.href,
-        coords:[x1,y1,x2,y2].map(n=>Math.round(n*scale)).join(",")
-      };
-    }).filter(Boolean);
+  function jpegData(canvas,quality=.82){
+    return canvas.toDataURL("image/jpeg",quality);
   }
 
-  async function capturePreviewSlice(preview,top,bottom,label,index){
-    const scale=1.6;
-    const pr=preview.getBoundingClientRect();
-    const h=Math.max(1,Math.round(bottom-top));
-    const canvas=await html2canvas(preview,{
-      scale,
-      useCORS:true,
-      allowTaint:false,
-      backgroundColor:"#ffffff",
-      logging:false,
-      x:pr.left+window.scrollX,
-      y:pr.top+window.scrollY+top,
-      width:pr.width,
-      height:h,
-      scrollX:0,
-      scrollY:0,
-      windowWidth:document.documentElement.scrollWidth,
-      windowHeight:document.documentElement.scrollHeight
-    });
-    const data=canvas.toDataURL("image/png");
-    const areas=anchorAreas(preview,top,bottom,scale);
-    const mapName=areas.length?`trendMap${index}`:"";
-    const map=areas.length
-      ? `<map name="${mapName}">${areas.map(x=>`<area shape="rect" coords="${x.coords}" href="${escAttr(x.href)}" target="_blank" rel="noopener noreferrer" alt="">`).join("")}</map>`
-      : "";
-    const usemap=mapName?` usemap="#${mapName}"`:"";
-    return `<img src="${data}"${usemap} alt="${escAttr(label||"")}" width="${canvas.width}" height="${canvas.height}" style="display:block;width:100%;height:auto;border:0;margin:0;padding:0">${map}`;
+  function cropCanvas(source,x,y,w,h){
+    x=Math.max(0,Math.round(x)); y=Math.max(0,Math.round(y));
+    w=Math.max(1,Math.round(w)); h=Math.max(1,Math.round(h));
+    const c=document.createElement("canvas");
+    c.width=w;c.height=h;
+    const ctx=c.getContext("2d");
+    ctx.fillStyle="#fff";ctx.fillRect(0,0,w,h);
+    ctx.drawImage(source,x,y,w,h,0,0,w,h);
+    return c;
   }
 
-  let partnerPackageAssets=[];
-
-  function relTop(el,rootRect){
-    return Math.max(0,el.getBoundingClientRect().top-rootRect.top);
+  function sliceHtml(dataUrl,width,height,label=""){
+    return `<img src="${dataUrl}" alt="${escAttr(label)}" width="${width}" height="${height}" style="display:block;width:100%;height:auto;border:0;margin:0;padding:0">`;
   }
 
-  function relBottom(el,rootRect){
-    return Math.max(0,el.getBoundingClientRect().bottom-rootRect.top);
-  }
-
-  function canvasBlob(canvas,type="image/jpeg",quality=.92){
-    return new Promise((resolve,reject)=>{
-      canvas.toBlob(blob=>blob?resolve(blob):reject(new Error("이미지 저장에 실패했습니다.")),type,quality);
-    });
-  }
-
-  function mapHtmlForSlice(preview,top,bottom,ratio,index){
-    const areas=anchorAreas(preview,top,bottom,ratio);
-    if(!areas.length) return {usemap:"",map:""};
-    const mapName=`trendMap${index}`;
-    const map=`<map name="${mapName}">${areas.map(x=>`<area shape="rect" coords="${x.coords}" href="${escAttr(x.href)}" target="_blank" rel="noopener noreferrer" alt="">`).join("")}</map>`;
-    return {usemap:` usemap="#${mapName}"`,map};
+  function linkedSliceHtml(dataUrl,width,height,links,label=""){
+    const overlays=links.map(link=>`<a href="${escAttr(link.href)}" target="_blank" rel="noopener noreferrer" aria-label="${escAttr(link.label||"")}" style="position:absolute;left:${link.left.toFixed(4)}%;top:${link.top.toFixed(4)}%;width:${link.width.toFixed(4)}%;height:${link.height.toFixed(4)}%;display:block;text-decoration:none;z-index:2"></a>`).join("");
+    return `<div style="position:relative;width:100%;margin:0;padding:0;line-height:0">${sliceHtml(dataUrl,width,height,label)}${overlays}</div>`;
   }
 
   async function buildPartnerHtml(){
     if(!cards.length) throw new Error("먼저 EML을 변환해 주세요.");
     const status=$("#htmlStatus"), preview=$("#preview");
-    status.textContent="미리보기 디자인을 이미지형 HTML로 변환하는 중...";
+    status.textContent="현재 미리보기를 아임웹용 이미지 HTML로 변환하는 중...";
 
     await waitForImages(preview);
     await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
 
     const pr=preview.getBoundingClientRect();
     const rendered=await html2canvas(preview,{
-      scale:1.35,
+      scale:1,
       useCORS:true,
-      allowTaint:true,
+      allowTaint:false,
       backgroundColor:"#ffffff",
       logging:false,
       scrollX:0,
@@ -986,45 +920,85 @@
       windowWidth:document.documentElement.scrollWidth,
       windowHeight:document.documentElement.scrollHeight
     });
-    const ratio=rendered.width/pr.width;
-    const keyword=$(".keyword"), footer=preview.querySelector(".footer");
-    const bars=[...preview.querySelectorAll(".bar")];
-    const groupEls=[...preview.querySelectorAll("#pvMedia .group")];
-    const slices=[];
+    const rx=rendered.width/pr.width, ry=rendered.height/pr.height;
 
-    // 1) 표지 + Weekly Keyword 영역
-    if(keyword) slices.push({top:0,bottom:relBottom(keyword,pr),label:"cover-weekly"});
-
-    // 2) New Media: 첫 그룹에는 New Media 바까지 함께 포함
-    groupEls.forEach((g,i)=>{
-      const top=i===0 && bars[1] ? relTop(bars[1],pr) : relTop(g,pr);
-      slices.push({top,bottom:relBottom(g,pr),label:`media-${String(i+1).padStart(2,"0")}`});
-    });
-
-    // 3) Footer
-    if(footer) slices.push({top:relTop(footer,pr),bottom:relBottom(footer,pr),label:"footer"});
-
-    partnerPackageAssets=[];
-    const htmlParts=[];
-    for(let i=0;i<slices.length;i++){
-      const s=slices[i];
-      const y=Math.max(0,Math.round(s.top*ratio));
-      const h=Math.max(1,Math.round((s.bottom-s.top)*ratio));
-      const canvas=document.createElement("canvas");
-      canvas.width=rendered.width;
-      canvas.height=h;
-      const ctx=canvas.getContext("2d");
-      ctx.fillStyle="#fff";
-      ctx.fillRect(0,0,canvas.width,canvas.height);
-      ctx.drawImage(rendered,0,y,rendered.width,h,0,0,rendered.width,h);
-      const name=`${String(i+1).padStart(2,"0")}-${s.label}.jpg`;
-      const blob=await canvasBlob(canvas,"image/jpeg",.92);
-      partnerPackageAssets.push({name,blob});
-      const maps=mapHtmlForSlice(preview,s.top,s.bottom,ratio,i+1);
-      htmlParts.push(`<img src="assets/${name}"${maps.usemap} alt="" width="${canvas.width}" height="${canvas.height}" style="display:block;width:100%;height:auto;border:0;margin:0;padding:0">${maps.map}`);
+    function rectOf(el){
+      const r=el.getBoundingClientRect();
+      return {left:r.left-pr.left,top:r.top-pr.top,right:r.right-pr.left,bottom:r.bottom-pr.top,width:r.width,height:r.height};
+    }
+    function captureRect(rect,quality=.82){
+      const x=rect.left*rx,y=rect.top*ry,w=rect.width*rx,h=rect.height*ry;
+      const c=cropCanvas(rendered,x,y,w,h);
+      return {url:jpegData(c,quality),width:c.width,height:c.height};
     }
 
-    return `<div class="trend-report-post" style="width:100%;max-width:980px;margin:0 auto;background:#fff">${htmlParts.join("")}</div><p><br></p><p><br></p>`;
+    const parts=[];
+    const keyword=preview.querySelector(".keyword");
+    if(keyword){
+      const kr=rectOf(keyword);
+      const cap=captureRect({left:0,top:0,width:pr.width,height:kr.bottom},.84);
+      parts.push(sliceHtml(cap.url,cap.width,cap.height,"Trend Report Weekly Keyword"));
+    }
+
+    const bars=[...preview.querySelectorAll(".bar")];
+    if(bars[1]){
+      const br=rectOf(bars[1]);
+      const pad=18;
+      const rect={left:0,top:Math.max(0,br.top-pad),width:pr.width,height:Math.min(pr.height,br.bottom+pad)-Math.max(0,br.top-pad)};
+      const cap=captureRect(rect,.84);
+      parts.push(sliceHtml(cap.url,cap.width,cap.height,"New Media"));
+    }
+
+    const groupEls=[...preview.querySelectorAll("#pvMedia .group")];
+    groupEls.forEach(group=>{
+      const title=group.querySelector(".group-title");
+      if(title){
+        const tr=rectOf(title);
+        const mediaRect=preview.querySelector("#pvMedia").getBoundingClientRect();
+        const left=mediaRect.left-pr.left;
+        const width=mediaRect.width;
+        const rect={left,top:tr.top,width,height:tr.height};
+        const cap=captureRect(rect,.84);
+        parts.push(sliceHtml(cap.url,cap.width,cap.height,title.textContent.trim()));
+      }
+
+      const cardEls=[...group.querySelectorAll(".content-card")];
+      for(let i=0;i<cardEls.length;i+=2){
+        const rowCards=cardEls.slice(i,i+2);
+        const rects=rowCards.map(rectOf);
+        const mediaRect=preview.querySelector("#pvMedia").getBoundingClientRect();
+        const left=mediaRect.left-pr.left;
+        const right=mediaRect.right-pr.left;
+        const top=Math.min(...rects.map(r=>r.top));
+        const bottom=Math.max(...rects.map(r=>r.bottom));
+        const rect={left,top,width:right-left,height:bottom-top};
+        const cap=captureRect(rect,.82);
+        const links=[];
+        rowCards.forEach((card,idx)=>{
+          const a=card.querySelector("a[href]");
+          if(!a)return;
+          const ar=rectOf(a);
+          links.push({
+            href:a.href,
+            label:(card.querySelector("h3")?.textContent||`콘텐츠 ${i+idx+1}`).trim(),
+            left:pct(ar.left-rect.left,rect.width),
+            top:pct(ar.top-rect.top,rect.height),
+            width:pct(ar.width,rect.width),
+            height:pct(ar.height,rect.height)
+          });
+        });
+        parts.push(linkedSliceHtml(cap.url,cap.width,cap.height,links,"Trend content"));
+      }
+    });
+
+    const footer=preview.querySelector(".footer");
+    if(footer){
+      const fr=rectOf(footer);
+      const cap=captureRect({left:0,top:fr.top,width:pr.width,height:fr.height},.84);
+      parts.push(sliceHtml(cap.url,cap.width,cap.height,"G마켓 파트너센터 안내"));
+    }
+
+    return `<div class="trend-report-post" style="width:100%;max-width:980px;margin:0 auto;background:#fff">${parts.join("")}</div><p><br></p><p><br></p>`;
   }
 
   async function copyText(text){
@@ -1036,13 +1010,13 @@
   $("#copyGithubHtml").onclick=async()=>{
     const btn=$("#copyGithubHtml"), status=$("#htmlStatus");
     btn.disabled=true;btn.textContent="HTML 만드는 중...";
-    status.textContent="HTML 생성을 시작합니다...";
+    status.textContent="이미지 내장형 HTML 생성을 시작합니다...";
     try{
       const html=await buildPartnerHtml();
       $("#resultHtml").value=html;
       $("#downloadHtml").disabled=false;
       $("#copyHtml").disabled=false;
-      status.textContent="이미지형 HTML 생성 완료. 아래 ‘7. 생성 결과’에서 확인 후 패키지로 다운로드하세요.";
+      status.textContent="완료: 외부 이미지 주소 없이 HTML 안에 이미지가 직접 들어갔습니다. 아래에서 복사하거나 다운로드하세요.";
       $("#htmlResultSection").scrollIntoView({behavior:"smooth",block:"start"});
       btn.textContent="HTML 생성 완료";
       setTimeout(()=>btn.textContent="파트너센터 HTML 생성",1400);
@@ -1061,33 +1035,15 @@
     $("#htmlStatus").textContent="HTML 전체를 복사했습니다.";
   };
 
-  $("#downloadHtml").onclick=async()=>{
+  $("#downloadHtml").onclick=()=>{
     const html=$("#resultHtml").value;
     if(!html){alert("먼저 파트너센터 HTML을 생성해 주세요.");return;}
-    if(!partnerPackageAssets.length){alert("이미지 패키지가 없습니다. HTML을 다시 생성해 주세요.");return;}
-
-    const fullHtml=`<!doctype html>
-<html lang="ko">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Trend Report</title>
-<style>html,body{margin:0;padding:0;background:#fff}img{display:block;max-width:100%;height:auto}</style>
-</head>
-<body>
-${html}
-</body>
-</html>`;
-
-    const zip=new JSZip();
-    zip.file("trend-report.html",fullHtml);
-    partnerPackageAssets.forEach(a=>zip.file("assets/"+a.name,a.blob));
-    $("#htmlStatus").textContent="HTML + 이미지 패키지 압축 중...";
-    const out=await zip.generateAsync({type:"blob",compression:"DEFLATE",compressionOptions:{level:6}});
-    const url=URL.createObjectURL(out),a=document.createElement("a");
-    a.href=url;a.download="trend-report-partnercenter.zip";document.body.appendChild(a);a.click();a.remove();
-    setTimeout(()=>URL.revokeObjectURL(url),1500);
-    $("#htmlStatus").textContent="완료: 가벼운 HTML 1개 + 이미지 파일을 ZIP으로 저장했습니다.";
+    const fullHtml=`<!doctype html>\n<html lang="ko">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width,initial-scale=1">\n<title>Trend Report</title>\n<style>html,body{margin:0;padding:0;background:#fff}img{display:block;max-width:100%;height:auto}</style>\n</head>\n<body>\n${html}\n</body>\n</html>`;
+    const blob=new Blob([fullHtml],{type:"text/html;charset=utf-8"});
+    const url=URL.createObjectURL(blob),a=document.createElement("a");
+    a.href=url;a.download="trend-report-partnercenter.html";document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1200);
+    $("#htmlStatus").textContent="HTML 파일 1개로 저장했습니다.";
   };
 
   today();
