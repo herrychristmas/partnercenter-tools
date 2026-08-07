@@ -1,0 +1,955 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Trend Report Generator v17</title>
+<style>
+  :root{
+    --green:#00c83c;
+    --blue:#0789d8;
+    --deep-blue:#0069c8;
+    --ink:#111;
+    --muted:#667085;
+    --line:#e6e9ee;
+    --panel:#f6f8fb;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",Arial,sans-serif;
+    background:#eef2f6;color:var(--ink);font-weight:500;
+  }
+  button,input,textarea,select{font:inherit}
+  .app{display:grid;grid-template-columns:460px minmax(0,1fr);min-height:100vh}
+  .panel{background:#fff;border-right:1px solid #dfe3e8;padding:18px;overflow:auto}
+  .preview-wrap{padding:28px;overflow:auto}
+  h1{font-size:22px;margin:0 0 6px;font-weight:900;letter-spacing:-.03em}
+  .sub{font-size:13px;color:var(--muted);margin-bottom:18px;line-height:1.55}
+  .section{border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:14px;background:#fff}
+  .section h2{font-size:17px;margin:0 0 10px;font-weight:900}
+  .drop{border:1.5px dashed #aab2bd;border-radius:12px;padding:14px;text-align:center;background:#fafbfc;cursor:pointer}
+  .drop.drag{border-color:var(--blue);background:#eef8ff}
+  .drop small{display:block;color:var(--muted);margin-top:4px}
+  textarea{width:100%;min-height:160px;border:1px solid var(--line);border-radius:10px;padding:10px;resize:vertical}
+  input[type="text"],input[type="date"],select{width:100%;border:1px solid var(--line);border-radius:10px;padding:9px 10px;background:#fff}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .btns{display:flex;gap:8px;flex-wrap:wrap}
+  button{border:0;border-radius:10px;padding:11px 14px;cursor:pointer;font-weight:800}
+  .primary{background:var(--blue);color:#fff}
+  .green{background:var(--green);color:#fff}
+  .ghost{background:#eef2f7;color:#374151}
+  .danger{background:#fff0f0;color:#d33}
+  .status{font-size:12px;color:var(--muted);margin-top:8px;white-space:pre-wrap}
+  .cards-edit{display:flex;flex-direction:column;gap:8px}
+  .edit-card{border:1px solid var(--line);border-radius:12px;padding:10px}
+  .edit-card .meta{display:grid;grid-template-columns:120px 1fr;gap:8px;margin-top:8px}
+  .cover-copy{min-height:82px;line-height:1.5}
+  .section input,.section textarea,.section select{font-size:15px}
+  .thumb-mini{width:100%;height:110px;object-fit:cover;border-radius:8px;background:#f0f0f0}
+  .hidden{display:none!important}
+
+  .preview{
+    width:980px;max-width:100%;margin:0 auto;background:#fff;
+    box-shadow:0 12px 35px rgba(0,0,0,.08);overflow:hidden;
+  }
+  .cover{
+    min-height:720px;padding:48px 64px 56px;position:relative;overflow:hidden;
+    background:
+      radial-gradient(circle at -4% 4%,#ded4fb 0 17%,transparent 17.3%),
+      radial-gradient(circle at 91% 16%,#dff7a2 0 14%,transparent 14.3%),
+      radial-gradient(circle at 28% 72%,#d6f8ff 0 13%,transparent 13.3%),
+      #fff;
+  }
+  .cover::after{
+    content:"";position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--green)
+  }
+  .cover .date{position:absolute;right:54px;top:34px;color:#0870d2;font-size:14px;font-weight:800}
+  .logo{
+    position:relative;z-index:1;margin-top:135px;
+    font-family:"Gmarket Sans","Pretendard","Apple SD Gothic Neo",sans-serif;
+    color:#0570cf;font-weight:1000;font-size:98px;line-height:1.06;letter-spacing:-.055em;
+    text-align:center;
+  }
+  .logo small{
+    display:block;max-width:650px;margin:48px auto 0;color:#0870d2;
+    font-size:26px;line-height:1.6;letter-spacing:-.03em;font-weight:800;
+  }
+  .bar{
+    display:inline-flex;align-items:center;justify-content:center;
+    color:#fff;font-weight:1000;font-size:26px;min-width:260px;
+    padding:14px 48px;border-radius:999px;
+    background:linear-gradient(90deg,var(--green) 0 45%,var(--blue) 72%);
+    position:relative;left:50%;transform:translate(-50%,-50%);
+    z-index:2;letter-spacing:-.03em;
+  }
+  .keyword{padding:40px 64px 52px;margin-top:-12px}
+  .keyword img{width:100%;display:block;border-radius:0}
+  .keyword-text{white-space:pre-wrap;line-height:1.72;font-size:14px}
+  .media{padding:34px 62px 78px;margin-top:-10px}
+  .group{margin-top:36px;padding-top:0}
+  .group:first-child{margin-top:0}
+  .group-title{
+    min-height:54px;margin:0 0 18px;padding:0 18px 8px 0;
+    display:flex;align-items:center;gap:9px;position:relative;
+    color:#111;font-size:26px;font-weight:1000;letter-spacing:-.045em;
+    font-family:"Tenada","Gmarket Sans","Pretendard","Apple SD Gothic Neo",sans-serif;
+    border-bottom:4px solid var(--green);
+  }
+  .group-title::before{
+    content:"";width:32px;height:32px;flex:0 0 32px;
+    background-repeat:no-repeat;background-position:center;background-size:contain;overflow:visible;
+  }
+  .group-title::after{margin-left:auto;font-size:26px;line-height:1}
+  .group:nth-child(1) .group-title::before{background-image:none}
+  .group:nth-child(1) .group-title::after{content:"👀"}
+  .group:nth-child(2) .group-title::before{background-image:none}
+  .group:nth-child(2) .group-title::after{content:"🔥"}
+  .group:nth-child(3) .group-title::before{background-image:none}
+  .group:nth-child(3) .group-title::after{content:"😎"}
+  .group:nth-child(4) .group-title::before{background-image:none}
+  .group:nth-child(4) .group-title::after{content:"📺"}
+  .group:nth-child(5) .group-title::before{background-image:none}
+  .group:nth-child(5) .group-title::after{content:"👍"}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:34px 24px}
+  .content-card{min-width:0}
+  .content-card a{color:inherit;text-decoration:none;display:block}
+  .content-card img{
+    width:100%;aspect-ratio:16/9;object-fit:cover;background:#f2f2f2;display:block;
+  }
+  .content-card h3{
+    font-size:20px;line-height:1.5;margin:12px 0 0;font-weight:900;
+    color:#111;letter-spacing:-.04em;word-break:keep-all;
+  }
+  .footer{
+    min-height:1060px;padding:0;background-image:none;
+    background-size:100% auto;background-position:top center;background-repeat:no-repeat;
+  }
+  .footer p,.footer .partner{display:none}
+
+  @media(max-width:1100px){
+    .app{grid-template-columns:1fr}
+    .panel{border-right:0;border-bottom:1px solid var(--line)}
+    .preview-wrap{padding:16px}
+  }
+  @media(max-width:760px){
+    .preview{width:100%}
+    .cover{min-height:520px;padding:28px 24px}
+    .logo{font-size:48px;margin-top:130px}
+    .keyword,.media{padding-left:22px;padding-right:22px}
+    .grid{gap:20px 12px}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="panel">
+    <h1>Trend Report Generator</h1>
+    <div class="sub">Outlook에서 저장한 EML 파일을 넣으면 제목·썸네일·링크를 자동으로 불러옵니다. 변환 후 필요한 부분만 확인해 주세요.</div>
+
+    <div class="section">
+      <h2>1. Outlook 메일 파일 자동 임시 저장 불러오기</h2>
+      <div id="emlDrop" class="drop">
+        .eml 파일 클릭 또는 드래그
+        <small>Outlook에서 저장한 .eml 파일을 그대로 넣어주세요.</small>
+      </div>
+      <input id="emlFile" class="hidden" type="file" accept=".eml,message/rfc822">
+      <div class="btns" style="margin-top:10px">
+        <button id="parseEmlBtn" class="primary">EML 자동 변환</button>
+        <button id="resetEmlBtn" class="ghost">초기화</button>
+      </div>
+      <div id="emlStatus" class="status"></div>
+    </div>
+
+    <div class="section">
+      <h2>2. 저장·내보내기</h2>
+      <div class="btns">
+        <button id="saveLocal" class="ghost">작업 임시 저장</button>
+        <button id="loadLocal" class="ghost">임시 저장 불러오기</button>
+        <button id="exportPng" class="green">PNG 내보내기</button>
+        <button id="exportHtml" class="ghost">PC 확인용 HTML 저장</button>
+        <button id="exportPartnerJpg" class="primary">파트너센터용 JPG 저장</button>
+      </div>
+      <div class="status">※ 파트너센터에는 ‘파트너센터용 JPG 저장’ 후 이미지 버튼으로 업로드하세요. Base64 HTML 붙여넣기는 저장 오류와 느려짐의 원인이 됩니다.</div>
+    </div>
+
+    <div class="section">
+      <h2>3. 기본 정보</h2>
+      <div class="row">
+        <input id="reportTitle" type="text" value="Trend Report" placeholder="리포트 제목">
+        <input id="reportDate" type="date">
+      </div>
+      <div style="margin-top:8px">
+        <textarea id="reportDesc" class="cover-copy" placeholder="표지 설명">똑똑 👀 매주 찾아오는 트렌드 리포트!
+금주의 핫이슈 콘텐츠를 한 번에 살펴보세요.</textarea>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>4. Weekly Keyword 이미지</h2>
+      <div id="keywordDrop" class="drop">
+        키워드 이미지 클릭·드래그·붙여넣기
+        <small>Weekly Keyword 영역을 캡처해 그대로 넣을 수 있습니다.</small>
+      </div>
+      <input id="keywordFile" class="hidden" type="file" accept="image/*">
+      <div class="btns" style="margin-top:10px">
+        <button id="runOcr" class="green hidden">이미지 글자 읽기(OCR)</button>
+        <button id="removeKeywordImage" class="ghost">이미지 제거</button>
+      </div>
+      <div id="ocrStatus" class="status"></div>
+      <textarea id="keywordText" class="hidden" placeholder="키워드 내용"></textarea>
+    </div>
+
+    <div class="section">
+      <h2>5. 메일 본문 붙여넣기</h2>
+      <textarea id="mailText" placeholder="EML 자동 변환이 어려울 때만 메일 본문을 복사해 붙여넣어 주세요."></textarea>
+      <div class="row" style="margin-top:8px">
+        <select id="pairMode">
+          <option value="auto">자동 분류</option>
+          <option value="youtube">전부 YouTube</option>
+          <option value="tiktok">전부 TikTok</option>
+          <option value="instagram">전부 Instagram</option>
+          <option value="naver">전부 네이버TV</option>
+          <option value="global">전부 해외 인기</option>
+        </select>
+        <button id="parseMail" class="primary">붙여넣은 내용 변환</button>
+      </div>
+      <div class="status">URL은 채널 구분에만 사용합니다. 각 채널 안에서는 제목 1번+이미지 1번 방식으로 순서대로 4개씩 묶습니다.</div>
+    </div>
+
+    <div class="section">
+      <h2>6. 카드 편집</h2>
+      <div class="btns" style="margin-bottom:10px">
+        <button id="addCard" class="ghost">콘텐츠 카드 추가</button>
+        <button id="clearCards" class="danger">카드 전체 삭제</button>
+      </div>
+      <div id="cardsEdit" class="cards-edit"></div>
+    </div>
+
+  </aside>
+
+  <main class="preview-wrap">
+    <article id="preview" class="preview">
+      <section class="cover">
+        <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
+        <div class="date" id="pvDate"></div>
+        <div class="logo" id="pvTitle">Trend<br>Report
+          <small id="pvDesc"></small>
+        </div>
+      </section>
+
+      <div class="bar">Weekly Keyword</div>
+      <section class="keyword">
+        <img id="pvKeywordImg" class="hidden" alt="">
+        <div id="pvKeywordText" class="keyword-text"></div>
+      </section>
+
+      <div class="bar">New Media</div>
+      <section id="pvMedia" class="media"></section>
+
+      <footer class="footer" aria-label="G마켓 파트너센터 안내"></footer>
+    </article>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script>
+(function(){
+  const $ = s => document.querySelector(s);
+  const groups = ["YouTube","TikTok","Instagram & SNS","네이버TV 인기100","해외 인기템"];
+  let keywordImage = "";
+  let cards = [];
+  let selectedEmlFile = null;
+
+  const esc = v => String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
+
+  function today(){
+    const d = new Date();
+    const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,"0"), day=String(d.getDate()).padStart(2,"0");
+    $("#reportDate").value = `${y}-${m}-${day}`;
+  }
+
+  function formatDate(v){
+    if(!v) return "";
+    const d=new Date(v+"T00:00:00");
+    return d.toLocaleDateString("en-US",{month:"short",day:"2-digit",year:"numeric"});
+  }
+
+  function render(){
+    $("#pvDate").textContent = formatDate($("#reportDate").value);
+    const rawTitle=($("#reportTitle").value||"Trend Report").trim();
+    let titleHtml=esc(rawTitle);
+    if(/^trend\s+report$/i.test(rawTitle)) titleHtml="Trend<br>Report";
+    else{
+      const parts=rawTitle.split(/\s+/);
+      if(parts.length>1) titleHtml=esc(parts.slice(0,-1).join(" "))+"<br>"+esc(parts.slice(-1)[0]);
+    }
+    $("#pvTitle").innerHTML = titleHtml+
+      '<small id="pvDesc">'+esc($("#reportDesc").value).replace(/\n/g,"<br>")+'</small>';
+
+    const img=$("#pvKeywordImg");
+    if(keywordImage){
+      img.src=keywordImage; img.classList.remove("hidden");
+    }else{
+      img.classList.add("hidden"); img.removeAttribute("src");
+    }
+    $("#pvKeywordText").textContent=$("#keywordText").value;
+
+    const media=$("#pvMedia");
+    media.innerHTML="";
+    groups.forEach(group=>{
+      const list=cards.filter(c=>c.group===group);
+      if(!list.length) return;
+      const sec=document.createElement("section");
+      sec.className="group";
+      sec.innerHTML=`<h2 class="group-title">${esc(group)}</h2><div class="grid"></div>`;
+      const grid=sec.querySelector(".grid");
+      list.forEach(c=>{
+        const article=document.createElement("article");
+        article.className="content-card";
+        const imgHtml = c.image ? `<img src="${esc(c.image)}" alt="">` : `<img alt="">`;
+        const inner = `${imgHtml}<h3>${esc(c.title)}</h3>`;
+        article.innerHTML = c.link ? `<a href="${esc(c.link)}" target="_blank" rel="noopener">${inner}</a>` : inner;
+        grid.appendChild(article);
+      });
+      media.appendChild(sec);
+    });
+    renderEditors();
+  }
+
+  function renderEditors(){
+    const wrap=$("#cardsEdit");
+    wrap.innerHTML="";
+    cards.forEach((c,i)=>{
+      const el=document.createElement("div");
+      el.className="edit-card";
+      el.innerHTML=`
+        <input type="text" data-k="title" data-i="${i}" value="${esc(c.title)}" placeholder="콘텐츠 제목">
+        <div class="meta">
+          <select data-k="group" data-i="${i}">
+            ${groups.map(g=>`<option ${g===c.group?"selected":""}>${g}</option>`).join("")}
+          </select>
+          <input type="text" data-k="link" data-i="${i}" value="${esc(c.link||"")}" placeholder="링크(URL)">
+        </div>
+        <div class="meta">
+          <input type="file" accept="image/*" data-img="${i}">
+          <button class="danger" data-del="${i}">삭제</button>
+        </div>
+        ${c.image?`<img class="thumb-mini" src="${esc(c.image)}" alt="">`:""}
+      `;
+      wrap.appendChild(el);
+    });
+  }
+
+
+  function normalizeUrl(url){
+    try{
+      const u=new URL(String(url||"").trim());
+      ["utm_source","utm_medium","utm_campaign","utm_term","utm_content","si","_r","_t","is_from_webapp","sender_device","web_id"].forEach(k=>u.searchParams.delete(k));
+      u.hash="";
+      return u.href;
+    }catch(e){ return String(url||"").trim(); }
+  }
+
+  // 같은 콘텐츠가 youtu.be / youtube.com, 추적 파라미터 등 서로 다른 주소로 들어와도
+  // 동일한 카드로 인식하기 위한 플랫폼별 고유 키입니다.
+  function linkKey(url){
+    try{
+      const u=new URL(normalizeUrl(url));
+      const host=u.hostname.replace(/^www\./,"").toLowerCase();
+      if(host==="youtu.be") return "youtube:"+u.pathname.split("/").filter(Boolean)[0];
+      if(host.endsWith("youtube.com")){
+        const v=u.searchParams.get("v");
+        if(v) return "youtube:"+v;
+        const m=u.pathname.match(/\/(?:shorts|embed)\/([^/?#]+)/i);
+        if(m) return "youtube:"+m[1];
+        return "youtube-path:"+u.pathname.replace(/\/$/,"").toLowerCase();
+      }
+      if(host.endsWith("tiktok.com")){
+        const m=u.pathname.match(/\/video\/(\d+)/i);
+        return m?"tiktok:"+m[1]:"tiktok-path:"+u.pathname.replace(/\/$/,"").toLowerCase();
+      }
+      if(host.endsWith("instagram.com")){
+        const m=u.pathname.match(/\/(?:p|reel|reels)\/([^/?#]+)/i);
+        return m?"instagram:"+m[1]:"instagram-path:"+u.pathname.replace(/\/$/,"").toLowerCase();
+      }
+      if(host==="tv.naver.com"){
+        const m=u.pathname.match(/\/v\/(\d+)/i);
+        return m?"navertv:"+m[1]:"navertv-path:"+u.pathname.replace(/\/$/,"").toLowerCase();
+      }
+      return host+u.pathname.replace(/\/$/,"").toLowerCase();
+    }catch(e){ return normalizeUrl(url); }
+  }
+
+  function dataUrlFromAttachment(att){
+    const mime=att.mimeType||att.contentType||"application/octet-stream";
+    if(typeof att.content==="string"){
+      return `data:${mime};base64,${att.content}`;
+    }
+    if(att.content instanceof ArrayBuffer){
+      const bytes=new Uint8Array(att.content);
+      let binary="";
+      for(let i=0;i<bytes.length;i+=0x8000){
+        binary+=String.fromCharCode.apply(null,bytes.subarray(i,i+0x8000));
+      }
+      return `data:${mime};base64,${btoa(binary)}`;
+    }
+    if(att.content && att.content.buffer){
+      const bytes=new Uint8Array(att.content.buffer);
+      let binary="";
+      for(let i=0;i<bytes.length;i+=0x8000){
+        binary+=String.fromCharCode.apply(null,bytes.subarray(i,i+0x8000));
+      }
+      return `data:${mime};base64,${btoa(binary)}`;
+    }
+    return "";
+  }
+
+  function classifyUrl(url){
+    const u=(url||"").toLowerCase();
+    if(u.includes("youtube.com")||u.includes("youtu.be")) return groups[0];
+    if(u.includes("tiktok.com")) return groups[1];
+    if(u.includes("instagram.com")||u.includes("x.com")||u.includes("twitter.com")) return groups[2];
+    if(u.includes("tv.naver.com")||u.includes("naver.me")) return groups[3];
+    return groups[4];
+  }
+
+  function meaningfulTitle(text){
+    const t=String(text||"").replace(/\s+/g," ").trim();
+    if(!t || t.length<2) return "";
+    if(/^https?:\/\//i.test(t)) return "";
+    if(/^\[cid:/i.test(t)) return "";
+    if(/^\[.*AI가 생성한 콘텐츠/i.test(t)) return "";
+    if(/^(자세히 보기|바로가기|click|more)$/i.test(t)) return "";
+    return t.replace(/[‘’']?\s*$/,'').trim();
+  }
+
+  function decodeQuotedPrintable(str){
+    return str
+      .replace(/=\r?\n/g,"")
+      .replace(/=([A-Fa-f0-9]{2})/g,(_,h)=>String.fromCharCode(parseInt(h,16)));
+  }
+
+  function decodeBytesToText(binary, charset){
+    const bytes=new Uint8Array(binary.length);
+    for(let i=0;i<binary.length;i++) bytes[i]=binary.charCodeAt(i)&255;
+    try{return new TextDecoder(charset||"utf-8").decode(bytes)}
+    catch(e){return new TextDecoder("utf-8").decode(bytes)}
+  }
+
+  function decodeMimeBody(body, encoding, charset){
+    encoding=(encoding||"").toLowerCase();
+    if(encoding.includes("base64")){
+      const clean=body.replace(/\s+/g,"");
+      return decodeBytesToText(atob(clean),charset);
+    }
+    if(encoding.includes("quoted-printable")){
+      return decodeBytesToText(decodeQuotedPrintable(body),charset);
+    }
+    return body;
+  }
+
+  function parseHeaders(raw){
+    const unfolded=raw.replace(/\r?\n[ \t]+/g," ");
+    const headers={};
+    unfolded.split(/\r?\n/).forEach(line=>{
+      const i=line.indexOf(":");
+      if(i<0)return;
+      const k=line.slice(0,i).trim().toLowerCase();
+      const v=line.slice(i+1).trim();
+      headers[k]=headers[k]?headers[k]+", "+v:v;
+    });
+    return headers;
+  }
+
+  function getParam(header,name){
+    const m=String(header||"").match(new RegExp(name+'\\s*=\\s*(?:"([^"]+)"|([^;\\s]+))',"i"));
+    return m?(m[1]||m[2]||""):"";
+  }
+
+  function decodeHeaderValue(v){
+    return String(v||"").replace(/=\?([^?]+)\?([BQ])\?([^?]+)\?=/gi,(_,cs,mode,data)=>{
+      try{
+        if(mode.toUpperCase()==="B") return decodeBytesToText(atob(data),cs);
+        return decodeBytesToText(decodeQuotedPrintable(data.replace(/_/g," ")),cs);
+      }catch(e){return data}
+    });
+  }
+
+  function splitMultipart(body,boundary){
+    if(!boundary)return [];
+    return body.split("--"+boundary).slice(1)
+      .map(x=>x.replace(/^\r?\n/,"").replace(/\r?\n--\s*$/,"").trim())
+      .filter(Boolean);
+  }
+
+  function parseMimeEntity(raw,out){
+    const cut=raw.search(/\r?\n\r?\n/);
+    const head=cut>=0?raw.slice(0,cut):raw;
+    const body=cut>=0?raw.slice(cut).replace(/^\r?\n\r?\n/,""):"";
+    const h=parseHeaders(head);
+    const ct=h["content-type"]||"text/plain";
+    const boundary=getParam(ct,"boundary");
+    if(/^multipart\//i.test(ct) && boundary){
+      splitMultipart(body,boundary).forEach(p=>parseMimeEntity(p,out));
+      return;
+    }
+    const charset=getParam(ct,"charset")||"utf-8";
+    const enc=h["content-transfer-encoding"]||"";
+    const disp=h["content-disposition"]||"";
+    const cid=String(h["content-id"]||"").replace(/[<>]/g,"");
+    const filename=getParam(disp,"filename")||getParam(ct,"name")||"";
+    if(/^text\/html/i.test(ct)){ if(!out.html) out.html=decodeMimeBody(body,enc,charset); return; }
+    if(/^text\/plain/i.test(ct)){ if(!out.text) out.text=decodeMimeBody(body,enc,charset); return; }
+    if(/^image\//i.test(ct)){
+      const clean=enc.toLowerCase().includes("base64")?body.replace(/\s+/g,""):"";
+      if(clean){
+        const mime=ct.split(";")[0].trim();
+        out.attachments.push({cid,filename,data:`data:${mime};base64,${clean}`});
+      }
+    }
+  }
+
+  // Outlook EML의 text/plain에는 제목과 이미지 CID가 모두 실제 링크와 함께 들어옵니다.
+  // 번호나 HTML 표 위치가 아니라 URL 고유키로 제목-썸네일을 직접 결합합니다.
+  function extractRecordsFromPlainText(plain, attachmentMap){
+    const lines=String(plain||"").replace(/\r/g,"").split("\n").map(v=>v.trim()).filter(Boolean);
+    const titles=[];
+    const images=[];
+    const standaloneCids=[];
+    let sawTitle=false;
+
+    lines.forEach(line=>{
+      const imageMatch=line.match(/^\[cid:([^\]]+)\](?:\s*<((?:https?:\/\/)[^>]+)>)?/i);
+      if(imageMatch){
+        const cid=imageMatch[1].replace(/[<>]/g,"");
+        const filename=cid.split("@")[0];
+        const image=attachmentMap[cid]||attachmentMap[filename]||"";
+        const link=imageMatch[2]?normalizeUrl(imageMatch[2]):"";
+        if(link){ images.push({image,link,key:linkKey(link),group:classifyUrl(link)}); }
+        else if(!sawTitle && image){ standaloneCids.push({cid,image}); }
+        return;
+      }
+
+      const titleMatch=line.match(/^(.*?)<((?:https?:\/\/)[^>]+)>(.*)$/i);
+      if(titleMatch){
+        const title=meaningfulTitle((titleMatch[1]||"")+(titleMatch[3]||""));
+        const link=normalizeUrl(titleMatch[2]);
+        if(title && !/mailto:/i.test(link)){
+          sawTitle=true;
+          titles.push({title,link,key:linkKey(link),group:classifyUrl(link)});
+        }
+      }
+    });
+
+    const usedImages=new Set();
+    const records=[];
+    titles.forEach(titleRec=>{
+      let idx=images.findIndex((img,i)=>!usedImages.has(i)&&img.key===titleRec.key);
+      if(idx<0) idx=images.findIndex((img,i)=>!usedImages.has(i)&&img.group===titleRec.group);
+      const imgRec=idx>=0?images[idx]:null;
+      if(idx>=0) usedImages.add(idx);
+      records.push({
+        title:titleRec.title,
+        image:imgRec?.image||"",
+        link:titleRec.link,
+        group:titleRec.group
+      });
+    });
+
+    return {records,standaloneCids};
+  }
+
+  async function parseEmlFile(file){
+    if(!file) throw new Error("EML 파일을 선택해 주세요.");
+    $("#emlStatus").textContent="메일 파일 읽는 중...";
+
+    const raw=await file.text();
+    const topCut=raw.search(/\r?\n\r?\n/);
+    const topHeaders=parseHeaders(topCut>=0?raw.slice(0,topCut):"");
+    const parsed={html:"",text:"",attachments:[]};
+    parseMimeEntity(raw,parsed);
+
+    const attachmentMap={};
+    parsed.attachments.forEach(att=>{
+      if(att.cid) attachmentMap[att.cid]=att.data;
+      if(att.filename) attachmentMap[att.filename]=att.data;
+      if(att.cid){
+        const short=att.cid.split("@")[0];
+        if(short) attachmentMap[short]=att.data;
+      }
+    });
+
+    const doc=new DOMParser().parseFromString(parsed.html||"","text/html");
+    doc.querySelectorAll("img").forEach(img=>{
+      const src=img.getAttribute("src")||"";
+      if(src.toLowerCase().startsWith("cid:")){
+        const key=src.slice(4).replace(/[<>]/g,"");
+        const short=key.split("@")[0];
+        const data=attachmentMap[key]||attachmentMap[short];
+        if(data) img.setAttribute("src",data);
+      }
+    });
+
+    const plain=(parsed.text||doc.body.textContent||"").replace(/\r/g,"").trim();
+    const extracted=extractRecordsFromPlainText(plain,attachmentMap);
+
+    cards=[];
+    groups.forEach(group=>{
+      extracted.records.filter(r=>r.group===group).slice(0,4).forEach(r=>cards.push(r));
+    });
+
+    // Weekly Keyword 원본은 주차마다 파일명이 달라집니다.
+    // 번호/CID 순서가 아니라 첨부 이미지의 실제 가로×세로 면적을 확인해
+    // 가장 큰 이미지(메일 상단의 1035×1077 영역)를 자동 선택합니다.
+    const weeklyCandidates=[];
+    const seenWeeklyData=new Set();
+    parsed.attachments.forEach(att=>{
+      if(att?.data && !seenWeeklyData.has(att.data)){
+        seenWeeklyData.add(att.data);
+        weeklyCandidates.push(att.data);
+      }
+    });
+
+    const getImageSize=dataUrl=>new Promise(resolve=>{
+      const img=new Image();
+      img.onload=()=>resolve({dataUrl,width:img.naturalWidth||img.width,height:img.naturalHeight||img.height});
+      img.onerror=()=>resolve({dataUrl,width:0,height:0});
+      img.src=dataUrl;
+    });
+
+    const measuredWeekly=await Promise.all(weeklyCandidates.map(getImageSize));
+    const bestWeekly=measuredWeekly
+      .filter(x=>x.width>=700 && x.height>=700)
+      .sort((a,b)=>(b.width*b.height)-(a.width*a.height))[0]
+      || measuredWeekly.sort((a,b)=>(b.width*b.height)-(a.width*a.height))[0];
+
+    if(bestWeekly?.dataUrl){
+      keywordImage=await cropKeywordTop(bestWeekly.dataUrl);
+    }
+
+    $("#mailText").value=plain;
+
+    const subject=decodeHeaderValue(topHeaders["subject"]||"").trim();
+    if(subject) $("#reportTitle").value=subject.replace(/\([^)]*\)/g,"").trim()||"Trend Report";
+
+    const date=new Date(topHeaders["date"]||Date.now());
+    if(!isNaN(date)){
+      $("#reportDate").value=[date.getFullYear(),String(date.getMonth()+1).padStart(2,"0"),String(date.getDate()).padStart(2,"0")].join("-");
+    }
+
+    const missingImages=cards.filter(c=>!c.image).length;
+    $("#emlStatus").textContent=`완료: 카드 ${cards.length}개 / 이미지 연결 ${cards.length-missingImages}개`+
+      (missingImages?` / 미연결 ${missingImages}개`:"");
+    render();
+  }
+
+  function cleanLines(raw){
+    const blacklist=[
+      "똑똑","매주 수요일","인스타그램","틱톡","유튜브","모든 뉴미디어",
+      "콘텐츠 타이틀","금주의 리포트는","자유롭게 의견","문의:"
+    ];
+    return raw.split(/\r?\n/)
+      .map(v=>v.replace(/\t+/g," ").trim())
+      .filter(v=>v && !blacklist.some(b=>v.includes(b)))
+      .filter(v=>v.length>6);
+  }
+
+  function parseMail(){
+    const lines=cleanLines($("#mailText").value);
+    if(!lines.length){ alert("붙여넣은 내용에서 제목을 찾지 못했어요."); return; }
+    const mode=$("#pairMode").value;
+    cards=[];
+    if(mode!=="auto"){
+      const map={youtube:groups[0],tiktok:groups[1],instagram:groups[2],naver:groups[3],global:groups[4]};
+      cards=lines.map(t=>({title:t,group:map[mode],link:"",image:""}));
+    }else{
+      const count=lines.length;
+      const base=Math.floor(count/5), rem=count%5;
+      let p=0;
+      groups.forEach((g,gi)=>{
+        const n=base+(gi<rem?1:0);
+        lines.slice(p,p+n).forEach(t=>cards.push({title:t,group:g,link:"",image:""}));
+        p+=n;
+      });
+    }
+    render();
+  }
+
+  async function fileToDataUrl(file){
+    return await new Promise((res,rej)=>{
+      const r=new FileReader();
+      r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(file);
+    });
+  }
+
+
+  async function cropKeywordTop(dataUrl){
+    return await new Promise((resolve,reject)=>{
+      const img=new Image();
+      img.onload=()=>{
+        // 메일 원본 이미지에서 TREND REPORT/날짜/상단 Weekly Keyword 로고 영역 제거
+        const cropY=Math.round(img.height*0.31);
+        const canvas=document.createElement("canvas");
+        canvas.width=img.width;
+        canvas.height=Math.max(1,img.height-cropY);
+        const ctx=canvas.getContext("2d");
+        ctx.fillStyle="#fff";
+        ctx.fillRect(0,0,canvas.width,canvas.height);
+        ctx.drawImage(img,0,cropY,img.width,img.height-cropY,0,0,img.width,img.height-cropY);
+        resolve(canvas.toDataURL("image/png"));
+      };
+      img.onerror=reject;
+      img.src=dataUrl;
+    });
+  }
+
+  async function setKeywordFile(file){
+    if(!file || !file.type.startsWith("image/")) return;
+    const original=await fileToDataUrl(file);
+    keywordImage=await cropKeywordTop(original);
+    render();
+  }
+
+
+  $("#emlDrop").onclick=()=>$("#emlFile").click();
+  $("#emlFile").onchange=e=>{
+    selectedEmlFile=e.target.files[0]||null;
+    $("#emlStatus").textContent=selectedEmlFile?`선택됨: ${selectedEmlFile.name}`:"";
+  };
+  $("#emlDrop").ondragover=e=>{e.preventDefault();e.currentTarget.classList.add("drag")};
+  $("#emlDrop").ondragleave=e=>e.currentTarget.classList.remove("drag");
+  $("#emlDrop").ondrop=e=>{
+    e.preventDefault();
+    e.currentTarget.classList.remove("drag");
+    const f=e.dataTransfer.files[0];
+    if(f){
+      selectedEmlFile=f;
+      $("#emlStatus").textContent=`선택됨: ${f.name}`;
+      parseEmlFile(f).catch(err=>$("#emlStatus").textContent="변환 실패: "+err.message);
+    }
+  };
+  $("#parseEmlBtn").onclick=()=>parseEmlFile(selectedEmlFile).catch(err=>$("#emlStatus").textContent="변환 실패: "+err.message);
+  $("#resetEmlBtn").onclick=()=>{
+    selectedEmlFile=null;
+    $("#emlFile").value="";
+    $("#emlStatus").textContent="";
+    keywordImage="";
+    cards=[];
+    render();
+  };
+
+  $("#keywordDrop").onclick=()=>$("#keywordFile").click();
+  $("#keywordFile").onchange=e=>setKeywordFile(e.target.files[0]);
+  $("#keywordDrop").ondragover=e=>{e.preventDefault();e.currentTarget.classList.add("drag")};
+  $("#keywordDrop").ondragleave=e=>e.currentTarget.classList.remove("drag");
+  $("#keywordDrop").ondrop=e=>{e.preventDefault();e.currentTarget.classList.remove("drag");setKeywordFile(e.dataTransfer.files[0])};
+  document.addEventListener("paste",e=>{
+    const item=[...e.clipboardData.items].find(i=>i.type.startsWith("image/"));
+    if(item && document.activeElement!==$("#mailText") && document.activeElement!==$("#keywordText")){
+      setKeywordFile(item.getAsFile());
+    }
+  });
+
+  $("#runOcr").onclick=async()=>{
+    if(!keywordImage){alert("먼저 키워드 이미지를 넣어주세요.");return;}
+    $("#ocrStatus").textContent="OCR 준비 중...";
+    try{
+      const result=await Tesseract.recognize(keywordImage,"kor+eng",{
+        logger:m=>{
+          if(m.status==="recognizing text"){
+            $("#ocrStatus").textContent=`글자 읽는 중... ${Math.round((m.progress||0)*100)}%`;
+          }
+        }
+      });
+      $("#keywordText").value=result.data.text.trim();
+      $("#ocrStatus").textContent="OCR 완료. 잘못 읽힌 부분만 수정해 주세요.";
+      render();
+    }catch(err){
+      $("#ocrStatus").textContent="OCR 실패: "+err.message;
+    }
+  };
+
+  $("#removeKeywordImage").onclick=()=>{keywordImage="";render()};
+  $("#parseMail").onclick=parseMail;
+  $("#addCard").onclick=()=>{cards.push({title:"새 콘텐츠",group:groups[0],link:"",image:""});render()};
+  $("#clearCards").onclick=()=>{if(confirm("카드를 모두 삭제할까요?")){cards=[];render()}};
+
+  $("#cardsEdit").addEventListener("input",async e=>{
+    const i=Number(e.target.dataset.i);
+    const k=e.target.dataset.k;
+    if(Number.isInteger(i)&&k){cards[i][k]=e.target.value;render();}
+  });
+  $("#cardsEdit").addEventListener("change",async e=>{
+    if(e.target.dataset.img!==undefined){
+      const i=Number(e.target.dataset.img);
+      const f=e.target.files[0];
+      if(f){cards[i].image=await fileToDataUrl(f);render();}
+    }
+  });
+  $("#cardsEdit").addEventListener("click",e=>{
+    if(e.target.dataset.del!==undefined){
+      cards.splice(Number(e.target.dataset.del),1);render();
+    }
+  });
+
+  ["reportTitle","reportDate","reportDesc","keywordText"].forEach(id=>$("#"+id).addEventListener("input",render));
+
+  $("#saveLocal").onclick=()=>{
+    localStorage.setItem("trendReportGenerator",JSON.stringify({
+      title:$("#reportTitle").value,date:$("#reportDate").value,desc:$("#reportDesc").value,
+      keywordImage,keywordText:$("#keywordText").value,mailText:$("#mailText").value,cards
+    }));
+    alert("현재 작업을 브라우저에 저장했어요.");
+  };
+
+  $("#loadLocal").onclick=()=>{
+    const d=JSON.parse(localStorage.getItem("trendReportGenerator")||"null");
+    if(!d){alert("저장된 작업이 없어요.");return;}
+    $("#reportTitle").value=d.title||""; $("#reportDate").value=d.date||"";
+    $("#reportDesc").value=d.desc||""; $("#keywordText").value=d.keywordText||"";
+    $("#mailText").value=d.mailText||""; keywordImage=d.keywordImage||""; cards=d.cards||[];
+    render();
+  };
+
+  $("#exportPng").onclick=async()=>{
+    const node=$("#preview");
+    const rendered=await html2canvas(node,{
+      scale:2,
+      useCORS:true,
+      allowTaint:true,
+      backgroundColor:"#ffffff",
+      logging:false
+    });
+    const canvas=document.createElement("canvas");
+    canvas.width=rendered.width;
+    canvas.height=rendered.height;
+    const ctx=canvas.getContext("2d");
+    ctx.fillStyle="#ffffff";
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.drawImage(rendered,0,0);
+    const a=document.createElement("a");
+    a.download="trend-report.png";
+    a.href=canvas.toDataURL("image/png");
+    a.click();
+  };
+
+  function inlineClone(source){
+    const clone=source.cloneNode(true);
+    const sourceEls=[source].concat(Array.from(source.querySelectorAll("*")));
+    const cloneEls=[clone].concat(Array.from(clone.querySelectorAll("*")));
+    const keep=[
+      "display","position","width","max-width","min-width","height","min-height",
+      "margin","padding","box-sizing","background","background-color","background-image",
+      "background-size","background-position","background-repeat","border","border-radius",
+      "box-shadow","color","font-family","font-size","font-weight","font-style","line-height",
+      "letter-spacing","text-align","text-decoration","white-space","word-break","overflow",
+      "object-fit","vertical-align","gap","grid-template-columns","flex-direction","align-items",
+      "justify-content","flex-wrap"
+    ];
+    sourceEls.forEach((el,i)=>{
+      const target=cloneEls[i];
+      if(!target||el.nodeType!==1) return;
+      const cs=getComputedStyle(el);
+      const styles=[];
+      keep.forEach(prop=>{
+        const value=cs.getPropertyValue(prop);
+        if(value) styles.push(`${prop}:${value}`);
+      });
+      target.setAttribute("style",styles.join(";"));
+      target.removeAttribute("class");
+      target.removeAttribute("id");
+    });
+    clone.querySelectorAll("button,input,textarea,select,script").forEach(el=>el.remove());
+    return clone;
+  }
+
+  $("#exportHtml").onclick=()=>{
+    const previewClone=$("#preview").cloneNode(true);
+    previewClone.removeAttribute("id");
+    previewClone.style.width="980px";
+    previewClone.style.maxWidth="100%";
+    previewClone.style.margin="0 auto";
+    previewClone.style.boxShadow="none";
+
+    const css=Array.from(document.querySelectorAll("style"))
+      .map(style=>style.textContent)
+      .join("\n");
+
+    const doc=`<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${esc($("#reportTitle").value||"Trend Report")}</title>
+<style>
+html,body{margin:0;padding:0;background:#fff}
+body{font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",Arial,sans-serif}
+${css}
+.app,.panel,.preview-wrap{display:block!important}
+.preview-wrap{padding:0!important}
+</style>
+</head>
+<body>
+${previewClone.outerHTML}
+</body>
+</html>`;
+
+    const blob=new Blob(["\ufeff",doc],{type:"text/html;charset=utf-8"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.download="trend-report.html";
+    a.href=url;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1500);
+  };
+
+  $("#exportPartnerJpg").onclick=async()=>{
+    const btn=$("#exportPartnerJpg");
+    const oldText=btn.textContent;
+    try{
+      btn.disabled=true;
+      btn.textContent="JPG 만드는 중...";
+      const node=$("#preview");
+      const rendered=await html2canvas(node,{
+        scale:1.5,
+        useCORS:true,
+        allowTaint:true,
+        backgroundColor:"#ffffff",
+        logging:false,
+        windowWidth:980
+      });
+      const maxWidth=860;
+      const ratio=Math.min(1,maxWidth/rendered.width);
+      const canvas=document.createElement("canvas");
+      canvas.width=Math.round(rendered.width*ratio);
+      canvas.height=Math.round(rendered.height*ratio);
+      const ctx=canvas.getContext("2d");
+      ctx.fillStyle="#ffffff";
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.drawImage(rendered,0,0,canvas.width,canvas.height);
+      const a=document.createElement("a");
+      a.download="partnercenter-trend-report.jpg";
+      a.href=canvas.toDataURL("image/jpeg",0.86);
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      alert("저장된 JPG를 파트너센터 에디터의 이미지 버튼으로 업로드해 주세요. HTML 소스 붙여넣기보다 훨씬 빠르고 저장 오류가 없습니다.");
+    }catch(err){
+      console.error(err);
+      alert("JPG 생성 중 오류가 발생했어요. 이미지가 모두 표시된 뒤 다시 눌러주세요.");
+    }finally{
+      btn.disabled=false;
+      btn.textContent=oldText;
+    }
+  };
+
+  today();
+  render();
+})();
+</script>
+</body>
+</html>
