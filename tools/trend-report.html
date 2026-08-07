@@ -873,56 +873,55 @@
     return esc(v).replace(/`/g,"&#96;");
   }
 
-  function previewY(el,previewRect){
-    const r=el.getBoundingClientRect();
-    return r.bottom-previewRect.top;
-  }
-
-  function anchorAreas(preview,sliceTop,sliceBottom,scale){
-    const pr=preview.getBoundingClientRect();
-    return [...preview.querySelectorAll("a[href]")].map(a=>{
+  function nodeLinks(node){
+    const nr=node.getBoundingClientRect();
+    return [...node.querySelectorAll("a[href]")].map(a=>{
       const r=a.getBoundingClientRect();
-      const top=r.top-pr.top, bottom=r.bottom-pr.top;
-      if(bottom<=sliceTop || top>=sliceBottom) return null;
-      const x1=Math.max(0,r.left-pr.left);
-      const y1=Math.max(sliceTop,top)-sliceTop;
-      const x2=Math.min(pr.width,r.right-pr.left);
-      const y2=Math.min(sliceBottom,bottom)-sliceTop;
-      if(x2<=x1 || y2<=y1) return null;
+      const left=Math.max(0,r.left-nr.left);
+      const top=Math.max(0,r.top-nr.top);
+      const right=Math.min(nr.width,r.right-nr.left);
+      const bottom=Math.min(nr.height,r.bottom-nr.top);
+      if(right<=left || bottom<=top) return null;
       return {
         href:a.href,
-        coords:[x1,y1,x2,y2].map(n=>Math.round(n*scale)).join(",")
+        left:left/nr.width*100,
+        top:top/nr.height*100,
+        width:(right-left)/nr.width*100,
+        height:(bottom-top)/nr.height*100
       };
     }).filter(Boolean);
   }
 
-  async function capturePreviewSlice(preview,top,bottom,label,index){
+  async function captureNode(node,label,withLinks){
+    if(!node) throw new Error((label||"섹션")+" 영역을 찾지 못했어요.");
+    await waitForImages(node);
+    await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+
     const scale=1.6;
-    const pr=preview.getBoundingClientRect();
-    const h=Math.max(1,Math.round(bottom-top));
-    const canvas=await html2canvas(preview,{
+    const canvas=await html2canvas(node,{
       scale,
       useCORS:true,
       allowTaint:false,
       backgroundColor:"#ffffff",
       logging:false,
-      x:pr.left+window.scrollX,
-      y:pr.top+window.scrollY+top,
-      width:pr.width,
-      height:h,
       scrollX:0,
-      scrollY:0,
-      windowWidth:document.documentElement.scrollWidth,
+      scrollY:-window.scrollY,
+      windowWidth:document.documentElement.clientWidth,
       windowHeight:document.documentElement.scrollHeight
     });
+
     const data=canvas.toDataURL("image/png");
-    const areas=anchorAreas(preview,top,bottom,scale);
-    const mapName=areas.length?`trendMap${index}`:"";
-    const map=areas.length
-      ? `<map name="${mapName}">${areas.map(x=>`<area shape="rect" coords="${x.coords}" href="${escAttr(x.href)}" target="_blank" rel="noopener noreferrer" alt="">`).join("")}</map>`
-      : "";
-    const usemap=mapName?` usemap="#${mapName}"`:"";
-    return `<img src="${data}"${usemap} alt="${escAttr(label||"")}" width="${canvas.width}" height="${canvas.height}" style="display:block;width:100%;height:auto;border:0;margin:0;padding:0">${map}`;
+    const img=`<img src="${data}" alt="${escAttr(label||"")}" width="${canvas.width}" height="${canvas.height}" style="display:block;width:100%;height:auto;border:0;margin:0;padding:0">`;
+    if(!withLinks) return img;
+
+    const links=nodeLinks(node);
+    if(!links.length) return img;
+
+    const overlays=links.map(x=>
+      `<a href="${escAttr(x.href)}" target="_blank" rel="noopener noreferrer" aria-label="콘텐츠 링크" style="position:absolute;display:block;left:${x.left.toFixed(4)}%;top:${x.top.toFixed(4)}%;width:${x.width.toFixed(4)}%;height:${x.height.toFixed(4)}%;z-index:2;text-decoration:none;background:transparent"></a>`
+    ).join("");
+
+    return `<div style="position:relative;display:block;width:100%;margin:0;padding:0;line-height:0;font-size:0">${img}${overlays}</div>`;
   }
 
   async function buildPartnerHtml(){
@@ -933,51 +932,60 @@
     await waitForImages(preview);
     await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
 
-    const pr=preview.getBoundingClientRect();
+    const cover=preview.querySelector(".cover");
     const bars=[...preview.querySelectorAll(".bar")];
-    const media=preview.querySelector("#pvMedia");
+    const keyword=preview.querySelector(".keyword");
     const groupsDom=[...preview.querySelectorAll("#pvMedia .group")];
     const footer=preview.querySelector(".footer");
-    if(bars.length<2 || !media || !footer) throw new Error("미리보기 섹션을 찾지 못했어요.");
 
-    const points=[0];
-    const labels=[];
-
-    // 첫 조각: 표지 + 실제 미리보기에서 겹쳐 보이는 Weekly Keyword 바까지
-    points.push(previewY(bars[0],pr));
-    labels.push("Trend Report");
-
-    // 둘째 조각: Weekly Keyword 본문 + New Media 바까지
-    points.push(previewY(bars[1],pr));
-    labels.push("Weekly Keyword");
-
-    // 채널은 카드로 재조립하지 않고, 현재 미리보기의 전체 폭을 그대로 잘라냅니다.
-    groupsDom.forEach((g,i)=>{
-      if(i===groupsDom.length-1) points.push(media.getBoundingClientRect().bottom-pr.top);
-      else points.push(g.getBoundingClientRect().bottom-pr.top);
-      labels.push(g.querySelector(".group-title")?.textContent.trim()||`New Media ${i+1}`);
-    });
-
-    // Footer는 사용자가 준 최종 푸터 이미지 전체를 마지막 조각으로 유지합니다.
-    const mediaBottom=media.getBoundingClientRect().bottom-pr.top;
-    if(points[points.length-1]<mediaBottom-1){
-      points.push(mediaBottom);
-      labels.push("New Media");
+    if(!cover || bars.length<2 || !keyword || !groupsDom.length || !footer){
+      throw new Error("미리보기 섹션을 찾지 못했어요.");
     }
-    points.push(footer.getBoundingClientRect().bottom-pr.top);
-    labels.push("G마켓 파트너센터 안내");
-
-    // 중복/역전 좌표 제거
-    const clean=[points[0]];
-    for(let i=1;i<points.length;i++) if(points[i]>clean[clean.length-1]+1) clean.push(points[i]);
-    if(clean[clean.length-1]<pr.height-1) clean.push(pr.height);
 
     const parts=[];
-    const total=clean.length-1;
-    for(let i=0;i<total;i++){
-      status.textContent=`파트너센터 HTML 만드는 중... (${i+1}/${total})`;
-      parts.push(await capturePreviewSlice(preview,clean[i],clean[i+1],labels[i]||"Trend Report",i+1));
+    const total=4+groupsDom.length;
+    let done=0;
+    const step=msg=>{
+      done++;
+      status.textContent=`파트너센터 HTML 만드는 중... (${done}/${total}) ${msg}`;
+    };
+
+    step("표지");
+    parts.push(await captureNode(cover,"Trend Report",false));
+
+    step("Weekly Keyword");
+    parts.push(
+      `<div style="position:relative;z-index:2;margin:-27px auto 0;width:100%;line-height:0;font-size:0;text-align:center">`+
+      `<div style="display:inline-block;width:32%;min-width:260px;max-width:360px">`+
+      await captureNode(bars[0],"Weekly Keyword",false)+
+      `</div></div>`
+    );
+    parts.push(await captureNode(keyword,"Weekly Keyword content",false));
+
+    step("New Media");
+    parts.push(
+      `<div style="position:relative;z-index:2;margin:-27px auto 0;width:100%;line-height:0;font-size:0;text-align:center">`+
+      `<div style="display:inline-block;width:32%;min-width:260px;max-width:360px">`+
+      await captureNode(bars[1],"New Media",false)+
+      `</div></div>`
+    );
+
+    for(let i=0;i<groupsDom.length;i++){
+      const group=groupsDom[i];
+      const title=group.querySelector(".group-title")?.textContent.trim()||`New Media ${i+1}`;
+      step(title);
+      const groupHtml=await captureNode(group,title,true);
+      parts.push(
+        `<div style="display:block;width:100%;box-sizing:border-box;padding:0 6.3265306122%;margin:${i===0?"24px":"36px"} 0 0 0;background:#ffffff;line-height:0;font-size:0">`+
+        groupHtml+
+        `</div>`
+      );
     }
+
+    parts.push(`<div style="height:78px;line-height:0;font-size:0;background:#ffffff">&nbsp;</div>`);
+
+    step("Footer");
+    parts.push(await captureNode(footer,"G마켓 파트너센터 안내",false));
 
     return `<div class="trend-report-post" style="width:100%;max-width:980px;margin:0 auto;background:#ffffff;line-height:0;font-size:0">${parts.join("")}</div><p><br></p><p><br></p>`;
   }
