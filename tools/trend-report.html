@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Trend Report Generator v22</title>
+<title>Trend Report Generator v22 · Image HTML</title>
 <style>
   :root{
     --green:#00c83c;
@@ -172,9 +172,9 @@
         <button id="saveLocal" class="ghost">작업 임시 저장</button>
         <button id="loadLocal" class="ghost">임시 저장 불러오기</button>
         
-        <button id="copyGithubHtml" class="primary">파트너센터 HTML 생성</button>
+        <button id="copyGithubHtml" class="primary">이미지형 HTML 생성</button>
       </div>
-      <div id="htmlStatus" class="status">EML 변환 후 ‘파트너센터 HTML 생성’을 눌러주세요.</div>
+      <div id="htmlStatus" class="status">EML 변환 후 ‘이미지형 HTML 생성’을 눌러주세요.</div>
     </div>
 
     <div class="section">
@@ -299,6 +299,7 @@
       description:"똑똑 👀 매주 찾아오는 트렌드 리포트!\n금주의 핫이슈 콘텐츠를 한 번에 살펴보세요.",
       keyword:{previewImage:"",publicImage:"",text:""},
       cards:[],
+      blocks:[],
       source:{subject:"",plainText:"",fileName:""}
     };
   }
@@ -380,7 +381,7 @@
     const h=parseHeaders(head), ct=h["content-type"]||"text/plain", boundary=getParam(ct,"boundary");
     if(/^multipart\//i.test(ct)&&boundary){splitMultipart(body,boundary).forEach(p=>parseMimeEntity(p,out));return;}
     const charset=getParam(ct,"charset")||"utf-8", enc=h["content-transfer-encoding"]||"", disp=h["content-disposition"]||"";
-    const cid=String(h["content-id"]||"").replace(/[<>]/g,""), filename=getParam(disp,"filename")||getParam(ct,"name")||"";
+    const cid=String(h["content-id"]||"").replace(/[<>]/g,""), filename=getParam(disp,"filename")||getParam(ct,"name")||"", contentLocation=String(h["content-location"]||"").trim();
     if(/^text\/html/i.test(ct)){if(!out.html)out.html=decodeTextBody(body,enc,charset);return;}
     if(/^text\/plain/i.test(ct)){if(!out.text)out.text=decodeTextBody(body,enc,charset);return;}
     if(/^image\//i.test(ct)){
@@ -388,7 +389,7 @@
         let bytes=null;
         if(String(enc).toLowerCase().includes("base64"))bytes=base64ToBytes(body);
         else if(String(enc).toLowerCase().includes("quoted-printable"))bytes=decodeQuotedPrintableBytes(body);
-        if(bytes&&bytes.length)out.attachments.push({cid,filename,mime:ct.split(";")[0].trim(),bytes});
+        if(bytes&&bytes.length)out.attachments.push({cid,filename,mime:ct.split(";")[0].trim(),bytes,contentLocation});
       }catch(e){}
     }
   }
@@ -432,7 +433,7 @@
     const map={};
     attachments.forEach(att=>{
       const blob=new Blob([att.bytes],{type:att.mime||"image/jpeg"}), url=registerObjectUrl(blob);
-      const rec={url,blob,mime:att.mime,cid:att.cid,filename:att.filename};
+      const rec={url,blob,mime:att.mime,cid:att.cid,filename:att.filename,publicUrl:isPublicUrl(att.contentLocation)?att.contentLocation:""};
       [att.cid,att.filename,att.cid&&att.cid.split("@")[0]].filter(Boolean).forEach(k=>map[k]=rec);
     });
     return map;
@@ -440,14 +441,18 @@
 
   function htmlImageRecords(html,attachmentMap){
     const doc=new DOMParser().parseFromString(html||"","text/html"), records=[];
-    doc.querySelectorAll("img").forEach(img=>{
-      const raw=String(img.getAttribute("src")||"").trim(), a=img.closest("a[href]"), link=a?normalizeUrl(a.getAttribute("href")):"";
+    doc.querySelectorAll("img").forEach((img,index)=>{
+      const candidates=[img.getAttribute("src"),img.getAttribute("data-src"),img.getAttribute("originalsrc"),img.getAttribute("data-original-src")].filter(Boolean).map(v=>String(v).trim());
+      const raw=candidates[0]||"", a=img.closest("a[href]"), link=a?normalizeUrl(a.getAttribute("href")):"";
       let previewImage="",publicImage="";
-      if(/^cid:/i.test(raw)){
-        const key=raw.slice(4).replace(/[<>]/g,""),short=key.split("@")[0],att=attachmentMap[key]||attachmentMap[short];
-        if(att)previewImage=att.url;
-      }else if(isPublicUrl(raw)){previewImage=publicImage=raw;}
-      if(previewImage||publicImage)records.push({link,key:link?linkKey(link):"",previewImage,publicImage,alt:meaningfulTitle(img.getAttribute("alt"))});
+      const cidSrc=candidates.find(v=>/^cid:/i.test(v));
+      const publicSrc=candidates.find(v=>isPublicUrl(v));
+      if(cidSrc){
+        const key=cidSrc.slice(4).replace(/[<>]/g,""),short=key.split("@")[0],att=attachmentMap[key]||attachmentMap[short];
+        if(att){previewImage=att.url;publicImage=att.publicUrl||"";}
+      }
+      if(publicSrc){previewImage=previewImage||publicSrc;publicImage=publicSrc;}
+      if(previewImage||publicImage)records.push({index,link,key:link?linkKey(link):"",previewImage,publicImage,alt:meaningfulTitle(img.getAttribute("alt"))});
     });
     return records;
   }
@@ -499,6 +504,7 @@
     if(!isNaN(date))model.date=[date.getFullYear(),String(date.getMonth()+1).padStart(2,"0"),String(date.getDate()).padStart(2,"0")].join("-");
     model.description=state.model.description;
     model.cards=cards;
+    model.blocks=images.map(x=>({image:x.publicImage||"",previewImage:x.previewImage||"",link:x.link||"",alt:x.alt||""}));
     model.keyword.previewImage=await chooseWeeklyImage(attMap);
     model.keyword.text=state.model.keyword.text||"";
     model.source={subject,plainText:plain,fileName:file.name};
@@ -548,29 +554,28 @@
     try{const u=new URL(url);let id="";if(u.hostname.includes("youtu.be"))id=u.pathname.split("/").filter(Boolean)[0]||"";else if(u.hostname.includes("youtube.com")){id=u.searchParams.get("v")||"";if(!id){const m=u.pathname.match(/\/(?:shorts|embed)\/([^/?#]+)/i);if(m)id=m[1];}}return id?`https://i.ytimg.com/vi/${encodeURIComponent(id)}/hqdefault.jpg`:"";}catch(e){return "";}
   }
   function publicThumb(c){return isPublicUrl(c.publicImage)?c.publicImage:youtubeThumb(c.link||"");}
-  function platform(group){if(group===GROUPS[0])return{badge:"▶",bg:"#fff4f4",fg:"#e62117"};if(group===GROUPS[1])return{badge:"♪",bg:"#f5f5f5",fg:"#111"};if(group===GROUPS[2])return{badge:"◎",bg:"#fff1f7",fg:"#d62976"};if(group===GROUPS[3])return{badge:"N",bg:"#effff4",fg:"#03c75a"};return{badge:"↗",bg:"#f1f6ff",fg:"#0870d2"};}
-  function pcCard(c){
-    const p=platform(c.group),thumb=publicThumb(c),href=isPublicUrl(c.link)?escAttr(c.link):"#",title=esc(c.title||"콘텐츠");
-    const media=thumb?`<img src="${escAttr(thumb)}" alt="" style="display:block;width:100%;height:auto;border:0;background:#f2f2f2">`:`<div style="height:220px;background:${p.bg};display:flex;align-items:center;justify-content:center;text-align:center;color:${p.fg};font-size:46px;font-weight:1000">${p.badge}</div>`;
-    return `<a href="${href}" target="_blank" rel="noopener noreferrer" style="display:block;color:#111;text-decoration:none">${media}<div style="font-family:Pretendard,'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;font-size:20px;line-height:1.5;font-weight:900;letter-spacing:-.04em;padding:12px 0 0;word-break:keep-all">${title}</div></a>`;
+  function imageBlock(image,link,alt){
+    const img=`<img src="${escAttr(image)}" alt="${escAttr(alt||"")}" class="fr-fic fr-dii" style="display:block;width:100%;max-width:980px;height:auto;margin:0 auto;padding:0;border:0">`;
+    return isPublicUrl(link)?`<a href="${escAttr(link)}" target="_blank" rel="noopener noreferrer" style="display:block;margin:0;padding:0;text-decoration:none">${img}</a>`:img;
   }
-  function pcGroup(group,list){
-    const p=platform(group);let rows="";
-    for(let i=0;i<list.length;i+=2){const a=list[i],b=list[i+1];rows+=`<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;border-collapse:collapse;margin:0 0 34px"><tr><td width="50%" valign="top" style="width:50%;padding:0 12px 0 0">${pcCard(a)}</td><td width="50%" valign="top" style="width:50%;padding:0 0 0 12px">${b?pcCard(b):""}</td></tr></table>`;}
-    return `<div style="margin:36px 0 0"><div style="min-height:54px;border-bottom:4px solid #00c83c;padding:0 0 8px;font-family:Pretendard,'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;font-size:26px;font-weight:1000;letter-spacing:-.045em;display:flex;align-items:center"><span style="display:inline-block;width:34px;height:34px;line-height:34px;text-align:center;margin-right:9px;border-radius:9px;background:${p.bg};color:${p.fg};font-size:20px">${p.badge}</span>${esc(group)}</div><div style="padding-top:18px">${rows}</div></div>`;
+  function collectImageBlocks(model){
+    const out=[],seen=new Set();
+    (model.blocks||[]).forEach(b=>{
+      const image=isPublicUrl(b.image)?b.image:"";
+      if(!image||seen.has(image))return;
+      seen.add(image);out.push({image,link:isPublicUrl(b.link)?b.link:"",alt:b.alt||""});
+    });
+    if(!out.length){
+      (model.cards||[]).forEach(c=>{const image=publicThumb(c);if(image&&!seen.has(image)){seen.add(image);out.push({image,link:isPublicUrl(c.link)?c.link:"",alt:c.title||""});}});
+    }
+    return out;
   }
-  function pill(text){return `<div style="position:relative;z-index:2;text-align:center;height:0;overflow:visible"><div style="display:inline-block;transform:translateY(-50%);min-width:260px;padding:14px 48px;border-radius:999px;background:linear-gradient(90deg,#00c83c 0 45%,#0789d8 72%);color:#fff;font-family:Pretendard,'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;font-size:26px;line-height:1.2;font-weight:1000;letter-spacing:-.03em">${esc(text)}</div></div>`;}
-  function footer(){return `<div style="background:#050505;color:#0870d2;text-align:center;padding:54px 56px 64px;font-family:Pretendard,'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif"><div style="font-size:24px;font-weight:900;margin:0 0 26px">오늘 정리해 드린 트렌드, 어떠셨나요?</div><div style="font-size:20px;font-weight:800;line-height:1.55;margin:0 0 34px">판매자님들의 기획에 작은 영감이 되었길 바라며<br>다음 주에도 새로운 소식 가득 들고 찾아올게요! ✨</div><div style="max-width:680px;margin:0 auto;border-radius:18px;padding:22px 24px 30px;background:linear-gradient(135deg,#f7edf7,#e8f2ff 55%,#e9ffd9);color:#0870d2"><div style="font-size:22px;font-weight:1000;margin-bottom:24px">↓ 더 많은 판매 꿀팁이 궁금하다면 ↓</div><div style="border:3px solid #5aa3ee;border-radius:18px;background:rgba(255,255,255,.18);overflow:hidden"><div style="height:44px;border-bottom:3px solid #5aa3ee;text-align:right;padding:4px 16px 0;font-size:24px;font-weight:700;color:#5aa3ee">— &nbsp; □ &nbsp; ×</div><div style="padding:48px 16px 52px;font-size:54px;font-weight:1000;letter-spacing:-.05em">G마켓 파트너센터 <span style="font-size:44px">↖</span></div></div></div></div>`;}
   function buildPartnerHtml(model){
-    if(!model.cards.length)throw new Error("먼저 EML을 변환해 주세요.");
-    const date=esc(formatDate(model.date)),desc=esc(model.description).replace(/\n/g,"<br>"),weekly=esc(model.keyword.text).replace(/\n/g,"<br>");
-    const cover=`<div style="min-height:720px;padding:48px 64px 56px;position:relative;background:#fff;font-family:Pretendard,'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;overflow:hidden"><div style="text-align:right;color:#0870d2;font-size:14px;font-weight:800">${date}</div><div style="margin-top:150px;text-align:center;color:#0570cf;font-size:98px;line-height:1.06;font-weight:1000;letter-spacing:-.055em">Trend<br>Report<div style="max-width:650px;margin:48px auto 0;color:#0870d2;font-size:26px;line-height:1.6;letter-spacing:-.03em;font-weight:800">${desc}</div></div><div style="position:absolute;left:0;right:0;bottom:0;height:3px;background:#00c83c"></div></div>`;
-    const weeklyBody=`<div style="padding:58px 64px 52px;background:#fff;font-family:Pretendard,'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif">${weekly?`<div style="line-height:1.75;font-size:18px;color:#111">${weekly}</div>`:`<div style="padding:44px 24px;border:1px solid #e6e9ee;background:#f8fafc;text-align:center;color:#667085;font-size:18px;line-height:1.6">Weekly Keyword 문구를 입력하면 이 영역에 표시됩니다.</div>`}</div>`;
-    const groupsHtml=GROUPS.map(g=>{const list=model.cards.filter(c=>c.group===g).slice(0,4);return list.length?pcGroup(g,list):"";}).join("");
-    const media=`<div style="padding:58px 62px 78px;background:#fff;font-family:Pretendard,'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif">${groupsHtml}</div>`;
-    return `<div class="trend-report-post" style="width:100%;max-width:980px;margin:0 auto;background:#fff">${cover}${pill("Weekly Keyword")}${weeklyBody}${pill("New Media")}${media}${footer()}</div><p><br></p><p><br></p>`;
+    const blocks=collectImageBlocks(model);
+    if(!blocks.length)throw new Error("파트너센터에서 사용할 수 있는 공개 이미지 주소를 찾지 못했습니다.");
+    const body=blocks.map(b=>imageBlock(b.image,b.link,b.alt)).join("\n");
+    return `<div class="trend-report-image-post" style="width:100%;max-width:980px;margin:0 auto;padding:0">\n${body}\n</div>\n<p><br></p><p><br></p>`;
   }
-
   /* ======================== FALLBACK TEXT PARSER ======================== */
   function cleanLines(raw){const blacklist=["똑똑","매주 수요일","인스타그램","틱톡","유튜브","모든 뉴미디어","콘텐츠 타이틀","금주의 리포트는","자유롭게 의견","문의:"];return String(raw||"").split(/\r?\n/).map(v=>v.replace(/\t+/g," ").trim()).filter(v=>v&&!blacklist.some(b=>v.includes(b))).filter(v=>v.length>6);}
   function parseMailFallback(){
@@ -583,7 +588,7 @@
 
   /* ======================== EVENTS ======================== */
   async function runEml(file){
-    try{$("#emlStatus").textContent="메일을 데이터로 변환하는 중...";state.model=await parseEmlToModel(file);syncInputsFromModel();renderPreview();const miss=state.model.cards.filter(c=>!publicThumb(c)).length;$("#emlStatus").textContent=`완료: 카드 ${state.model.cards.length}개 / 파트너센터 이미지 사용 가능 ${state.model.cards.length-miss}개${miss?` / 대체 카드 ${miss}개`:""}`;}
+    try{$("#emlStatus").textContent="메일을 데이터로 변환하는 중...";state.model=await parseEmlToModel(file);syncInputsFromModel();renderPreview();const usable=(state.model.blocks||[]).filter(b=>isPublicUrl(b.image)).length, total=(state.model.blocks||[]).length;$("#emlStatus").textContent=`완료: 이미지 ${total}개 인식 / 파트너센터용 공개 이미지 ${usable}개`+(usable<total?` / 공개 주소 없는 이미지 ${total-usable}개`:"");}
     catch(err){console.error(err);$("#emlStatus").textContent="변환 실패: "+err.message;}
   }
   $("#emlDrop").onclick=()=>$("#emlFile").click();
@@ -610,9 +615,9 @@
   $("#loadLocal").onclick=()=>{const d=JSON.parse(localStorage.getItem("trendReportGeneratorV22")||"null");if(!d){alert("저장된 작업이 없어요.");return;}state.model=d;syncInputsFromModel();renderPreview();};
 
   async function copyText(text){try{await navigator.clipboard.writeText(text)}catch(e){const t=document.createElement("textarea");t.value=text;t.style.position="fixed";t.style.left="-9999px";document.body.appendChild(t);t.select();document.execCommand("copy");t.remove();}}
-  $("#copyGithubHtml").onclick=()=>{try{syncModelFromInputs();const html=buildPartnerHtml(state.model);$("#resultHtml").value=html;$("#downloadHtml").disabled=false;$("#copyHtml").disabled=false;$("#htmlStatus").textContent="HTML 생성 완료. 미리보기 DOM이나 캡처 이미지를 사용하지 않은 전용 HTML입니다.";$("#htmlResultSection").scrollIntoView({behavior:"smooth",block:"start"});}catch(err){$("#htmlStatus").textContent="HTML 생성 실패: "+err.message;alert("HTML 생성 실패: "+err.message);}};
+  $("#copyGithubHtml").onclick=()=>{try{syncModelFromInputs();const html=buildPartnerHtml(state.model);$("#resultHtml").value=html;$("#downloadHtml").disabled=false;$("#copyHtml").disabled=false;$("#htmlStatus").textContent="이미지형 HTML 생성 완료. 이미지와 링크만 포함됩니다.";$("#htmlResultSection").scrollIntoView({behavior:"smooth",block:"start"});}catch(err){$("#htmlStatus").textContent="HTML 생성 실패: "+err.message;alert("HTML 생성 실패: "+err.message);}};
   $("#copyHtml").onclick=async()=>{const html=$("#resultHtml").value;if(!html){alert("먼저 파트너센터 HTML을 생성해 주세요.");return;}await copyText(html);$("#htmlStatus").textContent="HTML 전체를 복사했습니다.";};
-  $("#downloadHtml").onclick=()=>{const html=$("#resultHtml").value;if(!html){alert("먼저 파트너센터 HTML을 생성해 주세요.");return;}const blob=new Blob([html],{type:"text/html;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="trend-report-partnercenter-v22.html";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);$("#htmlStatus").textContent="V22 파트너센터 HTML을 다운로드했습니다.";};
+  $("#downloadHtml").onclick=()=>{const html=$("#resultHtml").value;if(!html){alert("먼저 파트너센터 HTML을 생성해 주세요.");return;}const blob=new Blob([html],{type:"text/html;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="trend-report-image-v22.html";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);$("#htmlStatus").textContent="V22 이미지형 HTML을 다운로드했습니다.";};
 
   today();syncInputsFromModel();renderPreview();
 })();
