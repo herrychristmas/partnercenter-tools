@@ -167,7 +167,28 @@
     </div>
 
     <div class="section">
-      <h2>2. 저장·내보내기</h2>
+      <h2>2. 이미지 자동 업로드 설정 <small style="font-size:11px;color:#667085">최초 1회</small></h2>
+      <div class="status" style="margin-bottom:10px">GitHub Pages 저장소를 이미지 보관함으로 사용합니다. 아래 설정은 이 브라우저에만 저장됩니다.</div>
+      <div class="row">
+        <input id="ghOwner" type="text" placeholder="GitHub 아이디 (예: herrychristmas)">
+        <input id="ghRepo" type="text" placeholder="저장소 이름 (예: partnercenter-tools)">
+      </div>
+      <div class="row" style="margin-top:8px">
+        <input id="ghBranch" type="text" value="main" placeholder="브랜치">
+        <input id="ghFolder" type="text" value="trend-assets" placeholder="이미지 폴더">
+      </div>
+      <div style="margin-top:8px">
+        <input id="ghToken" type="password" placeholder="Fine-grained GitHub token (Contents: Read and write)">
+      </div>
+      <div class="btns" style="margin-top:10px">
+        <button id="saveGithubSettings" class="ghost">업로드 설정 저장</button>
+        <button id="testGithubSettings" class="ghost">연결 확인</button>
+      </div>
+      <div id="githubStatus" class="status">처음 한 번만 설정하면 다음부터 자동으로 불러옵니다.</div>
+    </div>
+
+    <div class="section">
+      <h2>3. 저장·내보내기</h2>
       <div class="btns">
         <button id="saveLocal" class="ghost">작업 임시 저장</button>
         <button id="loadLocal" class="ghost">임시 저장 불러오기</button>
@@ -178,7 +199,7 @@
     </div>
 
     <div class="section">
-      <h2>3. 기본 정보</h2>
+      <h2>4. 기본 정보</h2>
       <div class="row">
         <input id="reportTitle" type="text" value="Trend Report" placeholder="리포트 제목">
         <input id="reportDate" type="date">
@@ -190,7 +211,7 @@
     </div>
 
     <div class="section">
-      <h2>4. Weekly Keyword 이미지</h2>
+      <h2>5. Weekly Keyword 이미지</h2>
       <div id="keywordDrop" class="drop">
         키워드 이미지 클릭·드래그·붙여넣기
         <small>Weekly Keyword 영역을 캡처해 그대로 넣을 수 있습니다.</small>
@@ -205,7 +226,7 @@
     </div>
 
     <div class="section">
-      <h2>5. 메일 본문 붙여넣기</h2>
+      <h2>6. 메일 본문 붙여넣기</h2>
       <textarea id="mailText" placeholder="EML 자동 변환이 어려울 때만 메일 본문을 복사해 붙여넣어 주세요."></textarea>
       <div class="row" style="margin-top:8px">
         <select id="pairMode">
@@ -222,7 +243,7 @@
     </div>
 
     <div class="section">
-      <h2>6. 카드 편집</h2>
+      <h2>7. 카드 편집</h2>
       <div class="btns" style="margin-bottom:10px">
         <button id="addCard" class="ghost">콘텐츠 카드 추가</button>
         <button id="clearCards" class="danger">카드 전체 삭제</button>
@@ -231,8 +252,8 @@
     </div>
 
     <div class="section" id="htmlResultSection">
-      <h2>7. 생성 결과</h2>
-      <div class="status">미리보기 디자인을 이미지로 유지하고, 링크만 얹은 가벼운 HTML 패키지를 생성합니다.</div>
+      <h2>8. 생성 결과</h2>
+      <div class="status">미리보기 디자인을 이미지로 유지하면서 이미지는 공개 URL로 자동 업로드하고, 파트너센터용 HTML에는 URL만 넣습니다.</div>
       <textarea id="resultHtml" readonly style="margin-top:10px;min-height:180px" placeholder="생성된 파트너센터 HTML이 여기에 표시됩니다."></textarea>
       <div class="btns" style="margin-top:10px">
         <button id="copyHtml" class="primary" disabled>HTML 전체 복사</button>
@@ -891,19 +912,111 @@
     return c;
   }
 
-  function sliceHtml(dataUrl,width,height,label=""){
-    return `<img src="${dataUrl}" alt="${escAttr(label)}" width="${width}" height="${height}" style="display:block;width:100%;height:auto;border:0;margin:0;padding:0">`;
+  function getGithubSettings(){
+    return {
+      owner:$("#ghOwner").value.trim(),
+      repo:$("#ghRepo").value.trim(),
+      branch:$("#ghBranch").value.trim()||"main",
+      folder:$("#ghFolder").value.trim().replace(/^\/+|\/+$/g,"")||"trend-assets",
+      token:$("#ghToken").value.trim()
+    };
   }
 
-  function linkedSliceHtml(dataUrl,width,height,links,label=""){
+  function validateGithubSettings(cfg){
+    if(!cfg.owner||!cfg.repo||!cfg.token) throw new Error("이미지 자동 업로드 설정에서 GitHub 아이디·저장소·토큰을 먼저 입력해 주세요.");
+  }
+
+  function saveGithubSettings(showMessage=true){
+    const cfg=getGithubSettings();
+    validateGithubSettings(cfg);
+    localStorage.setItem("trendReportGithub",JSON.stringify(cfg));
+    if(showMessage) $("#githubStatus").textContent="저장 완료. 다음부터 이 브라우저에서 자동으로 불러옵니다.";
+    return cfg;
+  }
+
+  function loadGithubSettings(){
+    try{
+      const cfg=JSON.parse(localStorage.getItem("trendReportGithub")||"null");
+      if(!cfg)return;
+      $("#ghOwner").value=cfg.owner||"";
+      $("#ghRepo").value=cfg.repo||"";
+      $("#ghBranch").value=cfg.branch||"main";
+      $("#ghFolder").value=cfg.folder||"trend-assets";
+      $("#ghToken").value=cfg.token||"";
+      $("#githubStatus").textContent="저장된 업로드 설정을 불러왔습니다.";
+    }catch(e){}
+  }
+
+  async function githubFetch(path,options={}){
+    const cfg=getGithubSettings();
+    validateGithubSettings(cfg);
+    const url=`https://api.github.com/repos/${encodeURIComponent(cfg.owner)}/${encodeURIComponent(cfg.repo)}${path}`;
+    const res=await fetch(url,{
+      ...options,
+      headers:{
+        "Accept":"application/vnd.github+json",
+        "Authorization":`Bearer ${cfg.token}`,
+        "X-GitHub-Api-Version":"2022-11-28",
+        ...(options.headers||{})
+      }
+    });
+    if(!res.ok){
+      let msg=`GitHub ${res.status}`;
+      try{const data=await res.json();if(data?.message)msg+=`: ${data.message}`}catch(e){}
+      throw new Error(msg);
+    }
+    return res.status===204?null:res.json();
+  }
+
+  async function testGithubConnection(){
+    const cfg=saveGithubSettings(false);
+    $("#githubStatus").textContent="GitHub 연결 확인 중...";
+    const data=await githubFetch("");
+    $("#githubStatus").textContent=`연결 성공: ${data.full_name} / 기본 브랜치 ${data.default_branch}`;
+  }
+
+  function dataUrlToBase64(dataUrl){
+    const i=String(dataUrl||"").indexOf(",");
+    if(i<0) throw new Error("이미지 데이터를 읽지 못했습니다.");
+    return dataUrl.slice(i+1);
+  }
+
+  function safeSlug(v){
+    return String(v||"").normalize("NFKD").replace(/[^a-zA-Z0-9_-]+/g,"-").replace(/^-+|-+$/g,"").slice(0,70)||"trend";
+  }
+
+  function reportAssetPrefix(){
+    const d=$("#reportDate").value||new Date().toISOString().slice(0,10);
+    const title=safeSlug($("#reportTitle").value||"trend-report");
+    return `${d}-${title}-${Date.now()}`;
+  }
+
+  async function uploadDataUrlToGithub(dataUrl,fileName){
+    const cfg=getGithubSettings();
+    validateGithubSettings(cfg);
+    const path=[cfg.folder,fileName].filter(Boolean).join("/");
+    const body={message:`Add Trend Report asset ${fileName}`,content:dataUrlToBase64(dataUrl),branch:cfg.branch};
+    const apiPath=`/contents/${path.split("/").map(encodeURIComponent).join("/")}`;
+    const data=await githubFetch(apiPath,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+    const encodedPath=path.split("/").map(encodeURIComponent).join("/");
+    const rawUrl=`https://raw.githubusercontent.com/${encodeURIComponent(cfg.owner)}/${encodeURIComponent(cfg.repo)}/${encodeURIComponent(cfg.branch)}/${encodedPath}`;
+    return {url:rawUrl,path,sha:data?.content?.sha||""};
+  }
+
+  function sliceHtml(url,width,height,label=""){
+    return `<img src="${escAttr(url)}" alt="${escAttr(label)}" width="${width}" height="${height}" style="display:block;width:100%;height:auto;border:0;margin:0;padding:0">`;
+  }
+
+  function linkedSliceHtml(url,width,height,links,label=""){
     const overlays=links.map(link=>`<a href="${escAttr(link.href)}" target="_blank" rel="noopener noreferrer" aria-label="${escAttr(link.label||"")}" style="position:absolute;left:${link.left.toFixed(4)}%;top:${link.top.toFixed(4)}%;width:${link.width.toFixed(4)}%;height:${link.height.toFixed(4)}%;display:block;text-decoration:none;z-index:2"></a>`).join("");
-    return `<div style="position:relative;width:100%;margin:0;padding:0;line-height:0">${sliceHtml(dataUrl,width,height,label)}${overlays}</div>`;
+    return `<div style="position:relative;width:100%;margin:0;padding:0;line-height:0">${sliceHtml(url,width,height,label)}${overlays}</div>`;
   }
 
   async function buildPartnerHtml(){
     if(!cards.length) throw new Error("먼저 EML을 변환해 주세요.");
     const status=$("#htmlStatus"), preview=$("#preview");
-    status.textContent="현재 미리보기를 아임웹용 이미지 HTML로 변환하는 중...";
+    const cfg=saveGithubSettings(false);
+    status.textContent="미리보기를 파트너센터용 이미지로 준비하는 중...";
 
     await waitForImages(preview);
     await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
@@ -929,15 +1042,15 @@
     function captureRect(rect,quality=.82){
       const x=rect.left*rx,y=rect.top*ry,w=rect.width*rx,h=rect.height*ry;
       const c=cropCanvas(rendered,x,y,w,h);
-      return {url:jpegData(c,quality),width:c.width,height:c.height};
+      return {dataUrl:jpegData(c,quality),width:c.width,height:c.height};
     }
 
-    const parts=[];
+    const captures=[];
     const keyword=preview.querySelector(".keyword");
     if(keyword){
       const kr=rectOf(keyword);
       const cap=captureRect({left:0,top:0,width:pr.width,height:kr.bottom},.84);
-      parts.push(sliceHtml(cap.url,cap.width,cap.height,"Trend Report Weekly Keyword"));
+      captures.push({...cap,label:"Trend Report Weekly Keyword",links:[]});
     }
 
     const bars=[...preview.querySelectorAll(".bar")];
@@ -946,7 +1059,7 @@
       const pad=18;
       const rect={left:0,top:Math.max(0,br.top-pad),width:pr.width,height:Math.min(pr.height,br.bottom+pad)-Math.max(0,br.top-pad)};
       const cap=captureRect(rect,.84);
-      parts.push(sliceHtml(cap.url,cap.width,cap.height,"New Media"));
+      captures.push({...cap,label:"New Media",links:[]});
     }
 
     const groupEls=[...preview.querySelectorAll("#pvMedia .group")];
@@ -957,9 +1070,8 @@
         const mediaRect=preview.querySelector("#pvMedia").getBoundingClientRect();
         const left=mediaRect.left-pr.left;
         const width=mediaRect.width;
-        const rect={left,top:tr.top,width,height:tr.height};
-        const cap=captureRect(rect,.84);
-        parts.push(sliceHtml(cap.url,cap.width,cap.height,title.textContent.trim()));
+        const cap=captureRect({left,top:tr.top,width,height:tr.height},.84);
+        captures.push({...cap,label:title.textContent.trim(),links:[]});
       }
 
       const cardEls=[...group.querySelectorAll(".content-card")];
@@ -987,7 +1099,7 @@
             height:pct(ar.height,rect.height)
           });
         });
-        parts.push(linkedSliceHtml(cap.url,cap.width,cap.height,links,"Trend content"));
+        captures.push({...cap,label:"Trend content",links});
       }
     });
 
@@ -995,9 +1107,21 @@
     if(footer){
       const fr=rectOf(footer);
       const cap=captureRect({left:0,top:fr.top,width:pr.width,height:fr.height},.84);
-      parts.push(sliceHtml(cap.url,cap.width,cap.height,"G마켓 파트너센터 안내"));
+      captures.push({...cap,label:"G마켓 파트너센터 안내",links:[]});
     }
 
+    const prefix=reportAssetPrefix();
+    const parts=[];
+    for(let i=0;i<captures.length;i++){
+      status.textContent=`이미지 자동 업로드 중... ${i+1}/${captures.length}`;
+      const cap=captures[i];
+      const uploaded=await uploadDataUrlToGithub(cap.dataUrl,`${prefix}-${String(i+1).padStart(2,"0")}.jpg`);
+      parts.push(cap.links.length
+        ? linkedSliceHtml(uploaded.url,cap.width,cap.height,cap.links,cap.label)
+        : sliceHtml(uploaded.url,cap.width,cap.height,cap.label));
+    }
+
+    status.textContent=`업로드 완료. ${captures.length}개 이미지를 ${cfg.owner}/${cfg.repo}/${cfg.folder}에 저장했습니다.`;
     return `<div class="trend-report-post" style="width:100%;max-width:980px;margin:0 auto;background:#fff">${parts.join("")}</div><p><br></p><p><br></p>`;
   }
 
@@ -1007,16 +1131,24 @@
     }
   }
 
+  $("#saveGithubSettings").onclick=()=>{
+    try{saveGithubSettings(true)}catch(err){$("#githubStatus").textContent="저장 실패: "+err.message}
+  };
+
+  $("#testGithubSettings").onclick=async()=>{
+    try{await testGithubConnection()}catch(err){$("#githubStatus").textContent="연결 실패: "+err.message}
+  };
+
   $("#copyGithubHtml").onclick=async()=>{
     const btn=$("#copyGithubHtml"), status=$("#htmlStatus");
     btn.disabled=true;btn.textContent="HTML 만드는 중...";
-    status.textContent="이미지 내장형 HTML 생성을 시작합니다...";
+    status.textContent="이미지 업로드 + 파트너센터 HTML 생성을 시작합니다...";
     try{
       const html=await buildPartnerHtml();
       $("#resultHtml").value=html;
       $("#downloadHtml").disabled=false;
       $("#copyHtml").disabled=false;
-      status.textContent="완료: 외부 이미지 주소 없이 HTML 안에 이미지가 직접 들어갔습니다. 아래에서 복사하거나 다운로드하세요.";
+      status.textContent="완료: Base64 없이 공개 이미지 URL로 파트너센터 HTML을 만들었습니다. 아래에서 복사하거나 다운로드하세요.";
       $("#htmlResultSection").scrollIntoView({behavior:"smooth",block:"start"});
       btn.textContent="HTML 생성 완료";
       setTimeout(()=>btn.textContent="파트너센터 HTML 생성",1400);
@@ -1046,6 +1178,7 @@
     $("#htmlStatus").textContent="HTML 파일 1개로 저장했습니다.";
   };
 
+  loadGithubSettings();
   today();
   render();
 })();
