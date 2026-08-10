@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Trend Report Generator v29 · PartnerCenter</title>
+<title>Trend Report Generator v30 · Final</title>
 <style>
   :root{
     --green:#00c83c;
@@ -94,7 +94,7 @@
   .keyword img{width:100%;display:block;border-radius:0}
   .keyword-text{white-space:pre-wrap;line-height:1.78;font-size:16px;font-weight:600}
   .media{padding:42px 62px 84px;margin-top:-10px}
-  .group{margin-top:36px;padding-top:0}
+  .group{margin-top:42px;padding-top:0}
   .group:first-child{margin-top:0}
   .group-title{
     min-height:54px;margin:0 0 18px;padding:0 18px 8px 0;
@@ -111,14 +111,18 @@
   .platform-logo svg{width:100%;height:100%;display:block}
   .platform-logo.logo-global{font-size:30px;background:#eef8ff}
   .group-title .platform-name{display:inline-block}
-  .grid{display:grid;grid-template-columns:1fr 1fr;gap:34px 24px}
-  .content-card{min-width:0}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:38px 26px}
+  .content-card{
+    min-width:0;
+    padding-bottom:20px;
+    border-bottom:2px solid #e9edf2;
+  }
   .content-card a{color:inherit;text-decoration:none;display:block}
   .content-card img{
     width:100%;aspect-ratio:16/9;object-fit:cover;background:#f2f2f2;display:block;
   }
   .content-card h3{
-    font-size:22px;line-height:1.52;margin:13px 0 0;font-weight:900;
+    font-size:23px;line-height:1.5;margin:14px 0 0;font-weight:900;
     color:#111;letter-spacing:-.04em;word-break:keep-all;
   }
   .footer{
@@ -158,7 +162,7 @@
 <body>
 <div class="app">
   <aside class="panel">
-    <h1>Trend Report Generator <small style="font-size:11px;color:#2890ff">PartnerCenter V29</small></h1>
+    <h1>Trend Report Generator <small style="font-size:11px;color:#2890ff">PartnerCenter V30 FINAL</small></h1>
     <div class="sub">EML을 넣으면 제목·이미지를 자동 추출하고, 완성된 트렌드 리포트를 Weekly Keyword와 채널별 이미지로 나눠 ZIP으로 저장합니다.</div>
 
     <div class="section">
@@ -176,7 +180,7 @@
     </div>
 
     <div class="section">
-      <h2>2. 저장·내보내기 <small style="font-size:11px;color:#2890ff">V29 · 고화질/링크</small></h2>
+      <h2>2. 저장·내보내기 <small style="font-size:11px;color:#2890ff">V30 FINAL · 고화질/링크</small></h2>
 
       <div class="btns">
         <button id="saveLocal" class="ghost">작업 임시 저장</button>
@@ -187,7 +191,7 @@
         <button id="exportPng" class="green" style="width:100%">① 고화질 링크용 JPG ZIP 저장</button>
       </div>
       <div id="htmlStatus" class="status">
-        카드별 JPG가 생성됩니다. ZIP을 풀고 전체 이미지를 한꺼번에 파트너센터에 업로드해 주세요.
+        카드별 초고화질 JPG가 생성됩니다. ZIP을 풀고 전체 이미지를 한꺼번에 파트너센터에 업로드해 주세요.
       </div>
 
       <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--line)">
@@ -901,9 +905,9 @@
           .replace(/\s+/g,"-").slice(0,50);
       }
 
-      async function nodeToJpg(node,filename,targetW=1200,quality=.94){
+      async function nodeToJpg(node,filename,targetW=1600,quality=.97){
         const canvas=await html2canvas(node,{
-          scale:2.2,
+          scale:3,
           useCORS:true,
           allowTaint:true,
           backgroundColor:"#ffffff",
@@ -920,6 +924,26 @@
         ctx.imageSmoothingEnabled=true;
         ctx.imageSmoothingQuality="high";
         ctx.drawImage(canvas,0,0,targetW,targetH);
+
+        // 아주 약한 샤프닝 효과: 텍스트/썸네일 경계를 조금 더 또렷하게
+        try{
+          const imgData=ctx.getImageData(0,0,targetW,targetH);
+          const d=imgData.data;
+          const copy=new Uint8ClampedArray(d);
+          const w=targetW,h=targetH;
+          for(let y=1;y<h-1;y++){
+            for(let x=1;x<w-1;x++){
+              const i=(y*w+x)*4;
+              const up=((y-1)*w+x)*4, down=((y+1)*w+x)*4;
+              const left=(y*w+x-1)*4, right=(y*w+x+1)*4;
+              for(let c=0;c<3;c++){
+                const v=copy[i+c]*1.35-(copy[up+c]+copy[down+c]+copy[left+c]+copy[right+c])*.0875;
+                d[i+c]=Math.max(0,Math.min(255,v));
+              }
+            }
+          }
+          ctx.putImageData(imgData,0,0);
+        }catch(e){}
 
         const blob=await new Promise((resolve,reject)=>{
           out.toBlob(b=>b?resolve(b):reject(new Error("JPG 변환 실패")),"image/jpeg",quality);
@@ -945,7 +969,7 @@
       await nodeToJpg(
         weeklyWrap,
         `${String(seq++).padStart(2,"0")}-cover-weekly-${date}.jpg`,
-        1200,.95
+        1600,.97
       );
       weeklyWrap.remove();
 
@@ -955,7 +979,7 @@
         await nodeToJpg(
           mediaBarWrap,
           `${String(seq++).padStart(2,"0")}-new-media-${date}.jpg`,
-          1200,.95
+          1600,.97
         );
         mediaBarWrap.remove();
       }
@@ -970,7 +994,7 @@
           await nodeToJpg(
             headerWrap,
             `${String(seq++).padStart(2,"0")}-${cleanName(groupName)}-header-${date}.jpg`,
-            1200,.95
+            1600,.97
           );
           headerWrap.remove();
         }
@@ -986,7 +1010,7 @@
           await nodeToJpg(
             cardWrap,
             `${String(seq++).padStart(2,"0")}-${cleanName(groupName)}-card-${String(i+1).padStart(2,"0")}-${date}.jpg`,
-            900,.95
+            1380,.97
           );
           cardWrap.remove();
         }
@@ -999,7 +1023,7 @@
         await nodeToJpg(
           footerWrap,
           `${String(seq++).padStart(2,"0")}-footer-${date}.jpg`,
-          1200,.95
+          1600,.97
         );
         footerWrap.remove();
       }
@@ -1011,7 +1035,7 @@
       document.body.appendChild(a);a.click();a.remove();
       setTimeout(()=>URL.revokeObjectURL(url),1500);
 
-      status.textContent=`저장 완료: 고화질 JPG ${count}장 · 카드별 이미지라 최종 HTML에서 각 카드 링크를 직접 연결할 수 있습니다.`;
+      status.textContent=`저장 완료: 초고화질 JPG ${count}장 저장 완료 · 카드별 링크 구조는 그대로 유지됩니다.`;
     }catch(err){
       console.error(err);
       status.textContent="고화질 JPG 저장 실패: "+err.message;
