@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Trend Report Generator v24 · Design Fix</title>
+<title>Trend Report Generator v25 · PartnerCenter</title>
 <style>
   :root{
     --green:#00c83c;
@@ -150,12 +150,15 @@
     .keyword,.media{padding-left:22px;padding-right:22px}
     .grid{gap:20px 12px}
   }
+
+  #partnerSource,#partnerHtmlResult{width:100%;resize:vertical;font-family:Consolas,monospace;font-size:12px;line-height:1.45}
+
 </style>
 </head>
 <body>
 <div class="app">
   <aside class="panel">
-    <h1>Trend Report Generator <small style="font-size:11px;color:#2890ff">Section Images V24 · Design Fix</small></h1>
+    <h1>Trend Report Generator <small style="font-size:11px;color:#2890ff">PartnerCenter V25</small></h1>
     <div class="sub">EML을 넣으면 제목·이미지를 자동 추출하고, 완성된 트렌드 리포트를 Weekly Keyword와 채널별 이미지로 나눠 ZIP으로 저장합니다.</div>
 
     <div class="section">
@@ -842,15 +845,16 @@
 
   $("#exportPng").onclick=async()=>{
     const btn=$("#exportPng"),status=$("#htmlStatus"),preview=$("#preview"),oldText=btn.textContent;
-    btn.disabled=true;btn.textContent="ZIP 만드는 중...";
-    status.textContent="리포트를 섹션별 이미지로 나누는 중...";
+    btn.disabled=true;btn.textContent="JPG ZIP 만드는 중...";
+    status.textContent="파트너센터용 가벼운 JPG를 만드는 중...";
     try{
       await waitForImages(preview);
       await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
 
       const pr=preview.getBoundingClientRect();
+      // scale 1.35: 화면용 화질은 유지하면서 기존 scale 2 PNG보다 훨씬 가볍게
       const rendered=await html2canvas(preview,{
-        scale:2,useCORS:true,allowTaint:true,backgroundColor:"#ffffff",
+        scale:1.35,useCORS:true,allowTaint:true,backgroundColor:"#ffffff",
         logging:false,scrollX:0,scrollY:0
       });
       const rx=rendered.width/pr.width, ry=rendered.height/pr.height;
@@ -862,49 +866,60 @@
         return {left:r.left-pr.left,top:r.top-pr.top,width:r.width,height:r.height,bottom:r.bottom-pr.top};
       }
       async function addCrop(rect,filename){
-        const x=Math.max(0,Math.round(rect.left*rx));
-        const y=Math.max(0,Math.round(rect.top*ry));
-        const w=Math.max(1,Math.round(rect.width*rx));
-        const h=Math.max(1,Math.round(rect.height*ry));
-        const c=document.createElement("canvas");c.width=w;c.height=h;
-        const ctx=c.getContext("2d");ctx.fillStyle="#fff";ctx.fillRect(0,0,w,h);
-        ctx.drawImage(rendered,x,y,w,h,0,0,w,h);
-        const blob=await new Promise((resolve,reject)=>c.toBlob(b=>b?resolve(b):reject(new Error("PNG 변환 실패")),"image/png"));
+        const sx=Math.max(0,Math.round(rect.left*rx));
+        const sy=Math.max(0,Math.round(rect.top*ry));
+        const sw=Math.max(1,Math.min(rendered.width-sx,Math.round(rect.width*rx)));
+        const sh=Math.max(1,Math.min(rendered.height-sy,Math.round(rect.height*ry)));
+
+        // 모든 출력물의 가로 폭을 동일하게 1000px로 통일
+        const targetW=1000;
+        const targetH=Math.max(1,Math.round(sh*(targetW/sw)));
+        const c=document.createElement("canvas");
+        c.width=targetW;c.height=targetH;
+        const ctx=c.getContext("2d");
+        ctx.fillStyle="#fff";ctx.fillRect(0,0,targetW,targetH);
+        ctx.imageSmoothingEnabled=true;
+        ctx.imageSmoothingQuality="high";
+        ctx.drawImage(rendered,sx,sy,sw,sh,0,0,targetW,targetH);
+
+        const blob=await new Promise((resolve,reject)=>{
+          c.toBlob(b=>b?resolve(b):reject(new Error("JPG 변환 실패")),"image/jpeg",0.88);
+        });
         zip.file(filename,blob);count++;
       }
 
-      // 01: 커버 + Weekly Keyword + New Media 배너까지
+      // 01. 커버 + Weekly Keyword (New Media 배너 직전까지)
       const secondBar=[...preview.querySelectorAll(".bar")][1];
-      const firstBottom=secondBar?relRect(secondBar).bottom:relRect(preview.querySelector(".keyword")).bottom;
-      await addCrop({left:0,top:0,width:pr.width,height:firstBottom+18},`01-cover-weekly-${date}.png`);
+      const firstBottom=secondBar ? Math.max(0,relRect(secondBar).top-6) : relRect(preview.querySelector(".keyword")).bottom;
+      await addCrop({left:0,top:0,width:pr.width,height:firstBottom},`01-cover-weekly-${date}.jpg`);
 
-      // 02~: 플랫폼별 섹션
+      // 02~. 플랫폼별 섹션 — 전부 동일 가로폭
       const groups=[...preview.querySelectorAll("#pvMedia .group")];
       for(let i=0;i<groups.length;i++){
         const g=groups[i],r=relRect(g);
         const name=(g.querySelector(".platform-name")?.textContent||`channel-${i+1}`)
           .trim().replace(/[\\/:*?"<>|]+/g,"-").replace(/\s+/g,"-");
-        await addCrop({left:0,top:Math.max(0,r.top-10),width:pr.width,height:r.height+20},
-          `${String(i+2).padStart(2,"0")}-${name}-${date}.png`);
+        await addCrop({left:0,top:Math.max(0,r.top-8),width:pr.width,height:r.height+16},
+          `${String(i+2).padStart(2,"0")}-${name}-${date}.jpg`);
       }
 
-      // 마지막 안내 페이지
+      // 마지막 안내
       const footer=preview.querySelector(".footer");
       if(footer){
         const r=relRect(footer);
-        await addCrop({left:0,top:r.top,width:pr.width,height:r.height},`${String(count+1).padStart(2,"0")}-footer-${date}.png`);
+        await addCrop({left:0,top:r.top,width:pr.width,height:r.height},
+          `${String(count+1).padStart(2,"0")}-footer-${date}.jpg`);
       }
 
-      const blob=await zip.generateAsync({type:"blob",compression:"DEFLATE",compressionOptions:{level:6}});
-      const a=document.createElement("a");
-      const url=URL.createObjectURL(blob);
+      const blob=await zip.generateAsync({type:"blob",compression:"STORE"});
+      const url=URL.createObjectURL(blob),a=document.createElement("a");
       a.download=`trend-report-sections-${date}.zip`;a.href=url;
       document.body.appendChild(a);a.click();a.remove();
       setTimeout(()=>URL.revokeObjectURL(url),1500);
-      status.textContent=`저장 완료: 총 ${count}개 섹션 이미지를 ZIP으로 저장했습니다.`;
+      status.textContent=`저장 완료: 가로 1000px JPG ${count}장 · 품질 88%로 저장했습니다.`;
     }catch(err){
-      console.error(err);status.textContent="이미지 ZIP 저장 실패: "+err.message;
-      alert("이미지 ZIP 저장 실패: "+err.message);
+      console.error(err);status.textContent="JPG ZIP 저장 실패: "+err.message;
+      alert("JPG ZIP 저장 실패: "+err.message);
     }finally{
       btn.disabled=false;btn.textContent=oldText;
     }
@@ -940,6 +955,114 @@
     ctx.drawImage(source,x,y,w,h,0,0,w,h);
     return c;
   }
+
+  let partnerImageUrls=[];
+
+  function normalizePartnerSource(raw){
+    return String(raw||"")
+      .replace(/\\</g,"<").replace(/\\>/g,">")
+      .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g,"$2")
+      .replace(/&quot;/g,'"').replace(/&#x27;|&#39;/g,"'");
+  }
+
+  function extractImageUrls(raw){
+    const src=normalizePartnerSource(raw);
+    const urls=[];
+    const re=/<img\b[^>]*?\bsrc\s*=\s*["']([^"']+)["'][^>]*>/gi;
+    let m;
+    while((m=re.exec(src))){
+      let u=m[1].trim();
+      // 사용자가 마크다운 링크 형태까지 복사한 경우 정리
+      const md=u.match(/^\[(https?:\/\/[^\]]+)\]\(https?:\/\/[^)]+\)$/);
+      if(md)u=md[1];
+      if(/^https?:\/\//i.test(u) && !urls.includes(u)) urls.push(u);
+    }
+    // img 태그가 깨진 복사본도 대비: cdn.imweb.me 주소 직접 탐색
+    if(!urls.length){
+      const direct=src.match(/https?:\/\/cdn\.imweb\.me\/[^\s"'<>()[\]]+/gi)||[];
+      direct.forEach(u=>{u=u.replace(/[),.;]+$/,"");if(!urls.includes(u))urls.push(u)});
+    }
+    return urls;
+  }
+
+  function getCurrentCardsByGroup(){
+    const map={};
+    GROUPS.forEach(g=>map[g]=[]);
+    state.cards.forEach(c=>{
+      const g=GROUPS.includes(c.group)?c.group:"YouTube";
+      map[g].push(c);
+    });
+    return map;
+  }
+
+  function buildLinkedImageBlock(url,cards,index){
+    const safeUrl=esc(url);
+    // 플랫폼 이미지 한 장 안에서 카드들이 2열 grid이므로 투명 링크 영역을 퍼센트 좌표로 생성
+    // 실제 이미지 자체는 정상 CDN URL. 파트너센터가 absolute 링크를 제거하더라도 이미지는 정상 노출됨.
+    let overlays="";
+    if(cards && cards.length){
+      const rows=Math.ceil(cards.length/2);
+      const titlePct=15; // 플랫폼 로고/제목 영역
+      const usable=85;
+      const rowH=usable/rows;
+      cards.forEach((c,i)=>{
+        if(!c.url)return;
+        const row=Math.floor(i/2),col=i%2;
+        const left=col===0?0:50;
+        const top=titlePct+row*rowH;
+        overlays+=`<a href="${esc(c.url)}" target="_blank" rel="noopener" style="position:absolute;left:${left}%;top:${top}%;width:50%;height:${rowH}%;display:block;text-decoration:none"></a>`;
+      });
+    }
+    return `<div style="max-width:1000px;margin:0 auto;position:relative;line-height:0"><img src="${safeUrl}" alt="Trend Report ${index+1}" style="display:block;width:100%;height:auto;border:0">${overlays}</div>`;
+  }
+
+  $("#extractPartnerImages").onclick=()=>{
+    partnerImageUrls=extractImageUrls($("#partnerSource").value);
+    $("#partnerStatus").textContent=partnerImageUrls.length
+      ? `이미지 주소 ${partnerImageUrls.length}개 자동 추출 완료`
+      : "이미지 주소를 찾지 못했습니다. 파트너센터 코드 보기의 HTML 전체를 그대로 붙여넣어 주세요.";
+  };
+
+  $("#makePartnerHtml").onclick=()=>{
+    partnerImageUrls=extractImageUrls($("#partnerSource").value);
+    if(!partnerImageUrls.length){
+      $("#partnerStatus").textContent="먼저 파트너센터 코드 HTML을 붙여넣어 주세요.";
+      return;
+    }
+    const byGroup=getCurrentCardsByGroup();
+    let p=0,blocks=[];
+
+    // 1: cover + weekly
+    if(partnerImageUrls[p]) blocks.push(buildLinkedImageBlock(partnerImageUrls[p],[],p++));
+    // 다음 이미지들: 실제 존재하는 그룹 순서대로
+    GROUPS.forEach(g=>{
+      const cards=byGroup[g]||[];
+      if(cards.length && partnerImageUrls[p]){
+        blocks.push(buildLinkedImageBlock(partnerImageUrls[p],cards,p++));
+      }
+    });
+    // 남은 이미지는 footer 등 — 링크 없이 그대로
+    while(p<partnerImageUrls.length){
+      blocks.push(buildLinkedImageBlock(partnerImageUrls[p],[],p++));
+    }
+
+    const html=`<div style="max-width:1000px;margin:0 auto;background:#fff">${blocks.join("")}</div>`;
+    $("#partnerHtmlResult").value=html;
+    $("#partnerStatus").textContent=`최종 HTML 생성 완료 · 이미지 ${partnerImageUrls.length}개 · 카드 링크 자동 매칭`;
+  };
+
+  $("#copyPartnerHtml").onclick=async()=>{
+    const v=$("#partnerHtmlResult").value;
+    if(!v){$("#partnerStatus").textContent="먼저 최종 HTML을 생성해 주세요.";return}
+    try{
+      await navigator.clipboard.writeText(v);
+      $("#partnerStatus").textContent="최종 HTML 복사 완료";
+    }catch{
+      $("#partnerHtmlResult").focus();$("#partnerHtmlResult").select();
+      document.execCommand("copy");
+      $("#partnerStatus").textContent="최종 HTML 복사 완료";
+    }
+  };
 
   today();
   render();
