@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Trend Report Generator v21 · Template</title>
+<title>Trend Report Generator v22 · Image Export</title>
 <style>
   :root{
     --green:#00c83c;
@@ -149,8 +149,8 @@
 <body>
 <div class="app">
   <aside class="panel">
-    <h1>Trend Report Generator <small style="font-size:11px;color:#2890ff">Template V21</small></h1>
-    <div class="sub">EML을 넣으면 제목·링크를 자동 추출하고, Base64 없이 파트너센터용 템플릿 HTML을 생성합니다.</div>
+    <h1>Trend Report Generator <small style="font-size:11px;color:#2890ff">Image V22</small></h1>
+    <div class="sub">EML을 넣으면 제목·이미지를 자동 추출하고, 완성된 트렌드 리포트를 파트너센터 업로드용 이미지로 저장합니다.</div>
 
     <div class="section">
       <h2>1. Outlook 메일 파일 자동 임시 저장 불러오기</h2>
@@ -167,39 +167,17 @@
     </div>
 
     <div class="section">
-      <h2>2. 이미지 자동 업로드 설정 <small style="font-size:11px;color:#667085">최초 1회</small></h2>
-      <div class="status" style="margin-bottom:10px">GitHub Pages 저장소를 이미지 보관함으로 사용합니다. 아래 설정은 이 브라우저에만 저장됩니다.</div>
-      <div class="row">
-        <input id="ghOwner" type="text" placeholder="GitHub 아이디 (예: herrychristmas)">
-        <input id="ghRepo" type="text" placeholder="저장소 이름 (예: partnercenter-tools)">
-      </div>
-      <div class="row" style="margin-top:8px">
-        <input id="ghBranch" type="text" value="main" placeholder="브랜치">
-        <input id="ghFolder" type="text" value="trend-assets" placeholder="이미지 폴더">
-      </div>
-      <div style="margin-top:8px">
-        <input id="ghToken" type="password" placeholder="Fine-grained GitHub token (Contents: Read and write)">
-      </div>
-      <div class="btns" style="margin-top:10px">
-        <button id="saveGithubSettings" class="ghost">업로드 설정 저장</button>
-        <button id="testGithubSettings" class="ghost">연결 확인</button>
-      </div>
-      <div id="githubStatus" class="status">처음 한 번만 설정하면 다음부터 자동으로 불러옵니다.</div>
-    </div>
-
-    <div class="section">
-      <h2>3. 저장·내보내기</h2>
+      <h2>2. 저장·내보내기</h2>
       <div class="btns">
         <button id="saveLocal" class="ghost">작업 임시 저장</button>
         <button id="loadLocal" class="ghost">임시 저장 불러오기</button>
-        <button id="exportPng" class="green">PNG 내보내기</button>
-        <button id="copyGithubHtml" class="primary">파트너센터 HTML 생성</button>
+        <button id="exportPng" class="green">파트너센터 이미지 저장</button>
       </div>
-      <div id="htmlStatus" class="status">EML 변환 후 ‘파트너센터 HTML 생성’을 눌러주세요.</div>
+      <div id="htmlStatus" class="status">EML 변환 후 ‘파트너센터 이미지 저장’을 눌러주세요.</div>
     </div>
 
     <div class="section">
-      <h2>4. 기본 정보</h2>
+      <h2>3. 기본 정보</h2>
       <div class="row">
         <input id="reportTitle" type="text" value="Trend Report" placeholder="리포트 제목">
         <input id="reportDate" type="date">
@@ -211,7 +189,7 @@
     </div>
 
     <div class="section">
-      <h2>5. Weekly Keyword 이미지</h2>
+      <h2>4. Weekly Keyword 이미지</h2>
       <div id="keywordDrop" class="drop">
         키워드 이미지 클릭·드래그·붙여넣기
         <small>Weekly Keyword 영역을 캡처해 그대로 넣을 수 있습니다.</small>
@@ -226,7 +204,7 @@
     </div>
 
     <div class="section">
-      <h2>6. 메일 본문 붙여넣기</h2>
+      <h2>5. 메일 본문 붙여넣기</h2>
       <textarea id="mailText" placeholder="EML 자동 변환이 어려울 때만 메일 본문을 복사해 붙여넣어 주세요."></textarea>
       <div class="row" style="margin-top:8px">
         <select id="pairMode">
@@ -243,22 +221,12 @@
     </div>
 
     <div class="section">
-      <h2>7. 카드 편집</h2>
+      <h2>6. 카드 편집</h2>
       <div class="btns" style="margin-bottom:10px">
         <button id="addCard" class="ghost">콘텐츠 카드 추가</button>
         <button id="clearCards" class="danger">카드 전체 삭제</button>
       </div>
       <div id="cardsEdit" class="cards-edit"></div>
-    </div>
-
-    <div class="section" id="htmlResultSection">
-      <h2>8. 생성 결과</h2>
-      <div class="status">미리보기 디자인을 이미지로 유지하면서 이미지는 공개 URL로 자동 업로드하고, 파트너센터용 HTML에는 URL만 넣습니다.</div>
-      <textarea id="resultHtml" readonly style="margin-top:10px;min-height:180px" placeholder="생성된 파트너센터 HTML이 여기에 표시됩니다."></textarea>
-      <div class="btns" style="margin-top:10px">
-        <button id="copyHtml" class="primary" disabled>HTML 전체 복사</button>
-        <button id="downloadHtml" class="green" disabled>HTML 다운로드</button>
-      </div>
     </div>
 
   </aside>
@@ -299,7 +267,6 @@
 
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script>
 (function(){
   const $ = s => document.querySelector(s);
@@ -860,25 +827,48 @@
   };
 
   $("#exportPng").onclick=async()=>{
+    const btn=$("#exportPng");
+    const status=$("#htmlStatus");
     const node=$("#preview");
-    const rendered=await html2canvas(node,{
-      scale:2,
-      useCORS:true,
-      allowTaint:true,
-      backgroundColor:"#ffffff",
-      logging:false
-    });
-    const canvas=document.createElement("canvas");
-    canvas.width=rendered.width;
-    canvas.height=rendered.height;
-    const ctx=canvas.getContext("2d");
-    ctx.fillStyle="#ffffff";
-    ctx.fillRect(0,0,canvas.width,canvas.height);
-    ctx.drawImage(rendered,0,0);
-    const a=document.createElement("a");
-    a.download="trend-report.png";
-    a.href=canvas.toDataURL("image/png");
-    a.click();
+    const oldText=btn.textContent;
+    btn.disabled=true;
+    btn.textContent="이미지 만드는 중...";
+    status.textContent="파트너센터 업로드용 이미지를 만드는 중...";
+    try{
+      await waitForImages(node);
+      await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+      const rendered=await html2canvas(node,{
+        scale:2,
+        useCORS:true,
+        allowTaint:true,
+        backgroundColor:"#ffffff",
+        logging:false,
+        scrollX:0,
+        scrollY:0
+      });
+      const canvas=document.createElement("canvas");
+      canvas.width=rendered.width;
+      canvas.height=rendered.height;
+      const ctx=canvas.getContext("2d");
+      ctx.fillStyle="#ffffff";
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.drawImage(rendered,0,0);
+      const date=$("#reportDate").value||"trend-report";
+      const a=document.createElement("a");
+      a.download=`trend-report-${date}.png`;
+      a.href=canvas.toDataURL("image/png");
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      status.textContent=`저장 완료: ${canvas.width}×${canvas.height}px PNG 파일입니다. 파트너센터에 이미지로 업로드해 주세요.`;
+    }catch(err){
+      console.error(err);
+      status.textContent="이미지 저장 실패: "+err.message;
+      alert("이미지 저장 실패: "+err.message);
+    }finally{
+      btn.disabled=false;
+      btn.textContent=oldText;
+    }
   };
 
   function waitForImages(root){
@@ -912,273 +902,6 @@
     return c;
   }
 
-  function getGithubSettings(){
-    return {
-      owner:$("#ghOwner").value.trim(),
-      repo:$("#ghRepo").value.trim(),
-      branch:$("#ghBranch").value.trim()||"main",
-      folder:$("#ghFolder").value.trim().replace(/^\/+|\/+$/g,"")||"trend-assets",
-      token:$("#ghToken").value.trim()
-    };
-  }
-
-  function validateGithubSettings(cfg){
-    if(!cfg.owner||!cfg.repo||!cfg.token) throw new Error("이미지 자동 업로드 설정에서 GitHub 아이디·저장소·토큰을 먼저 입력해 주세요.");
-  }
-
-  function saveGithubSettings(showMessage=true){
-    const cfg=getGithubSettings();
-    validateGithubSettings(cfg);
-    localStorage.setItem("trendReportGithub",JSON.stringify(cfg));
-    if(showMessage) $("#githubStatus").textContent="저장 완료. 다음부터 이 브라우저에서 자동으로 불러옵니다.";
-    return cfg;
-  }
-
-  function loadGithubSettings(){
-    try{
-      const cfg=JSON.parse(localStorage.getItem("trendReportGithub")||"null");
-      if(!cfg)return;
-      $("#ghOwner").value=cfg.owner||"";
-      $("#ghRepo").value=cfg.repo||"";
-      $("#ghBranch").value=cfg.branch||"main";
-      $("#ghFolder").value=cfg.folder||"trend-assets";
-      $("#ghToken").value=cfg.token||"";
-      $("#githubStatus").textContent="저장된 업로드 설정을 불러왔습니다.";
-    }catch(e){}
-  }
-
-  async function githubFetch(path,options={}){
-    const cfg=getGithubSettings();
-    validateGithubSettings(cfg);
-    const url=`https://api.github.com/repos/${encodeURIComponent(cfg.owner)}/${encodeURIComponent(cfg.repo)}${path}`;
-    const res=await fetch(url,{
-      ...options,
-      headers:{
-        "Accept":"application/vnd.github+json",
-        "Authorization":`Bearer ${cfg.token}`,
-        "X-GitHub-Api-Version":"2022-11-28",
-        ...(options.headers||{})
-      }
-    });
-    if(!res.ok){
-      let msg=`GitHub ${res.status}`;
-      try{const data=await res.json();if(data?.message)msg+=`: ${data.message}`}catch(e){}
-      throw new Error(msg);
-    }
-    return res.status===204?null:res.json();
-  }
-
-  async function testGithubConnection(){
-    const cfg=saveGithubSettings(false);
-    $("#githubStatus").textContent="GitHub 연결 확인 중...";
-    const data=await githubFetch("");
-    $("#githubStatus").textContent=`연결 성공: ${data.full_name} / 기본 브랜치 ${data.default_branch}`;
-  }
-
-  function dataUrlToBase64(dataUrl){
-    const i=String(dataUrl||"").indexOf(",");
-    if(i<0) throw new Error("이미지 데이터를 읽지 못했습니다.");
-    return dataUrl.slice(i+1);
-  }
-
-  function safeSlug(v){
-    return String(v||"").normalize("NFKD").replace(/[^a-zA-Z0-9_-]+/g,"-").replace(/^-+|-+$/g,"").slice(0,70)||"trend";
-  }
-
-  function reportAssetPrefix(){
-    const d=$("#reportDate").value||new Date().toISOString().slice(0,10);
-    const title=safeSlug($("#reportTitle").value||"trend-report");
-    return `${d}-${title}-${Date.now()}`;
-  }
-
-  async function uploadDataUrlToGithub(dataUrl,fileName){
-    const cfg=getGithubSettings();
-    validateGithubSettings(cfg);
-    const path=[cfg.folder,fileName].filter(Boolean).join("/");
-    const body={message:`Add Trend Report asset ${fileName}`,content:dataUrlToBase64(dataUrl),branch:cfg.branch};
-    const apiPath=`/contents/${path.split("/").map(encodeURIComponent).join("/")}`;
-    const data=await githubFetch(apiPath,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
-    const encodedPath=path.split("/").map(encodeURIComponent).join("/");
-    const rawUrl=`https://raw.githubusercontent.com/${encodeURIComponent(cfg.owner)}/${encodeURIComponent(cfg.repo)}/${encodeURIComponent(cfg.branch)}/${encodedPath}`;
-    return {url:rawUrl,path,sha:data?.content?.sha||""};
-  }
-
-  function sliceHtml(url,width,height,label=""){
-    return `<img src="${escAttr(url)}" alt="${escAttr(label)}" width="${width}" height="${height}" style="display:block;width:100%;height:auto;border:0;margin:0;padding:0">`;
-  }
-
-  function linkedSliceHtml(url,width,height,links,label=""){
-    const overlays=links.map(link=>`<a href="${escAttr(link.href)}" target="_blank" rel="noopener noreferrer" aria-label="${escAttr(link.label||"")}" style="position:absolute;left:${link.left.toFixed(4)}%;top:${link.top.toFixed(4)}%;width:${link.width.toFixed(4)}%;height:${link.height.toFixed(4)}%;display:block;text-decoration:none;z-index:2"></a>`).join("");
-    return `<div style="position:relative;width:100%;margin:0;padding:0;line-height:0">${sliceHtml(url,width,height,label)}${overlays}</div>`;
-  }
-
-  async function buildPartnerHtml(){
-    if(!cards.length) throw new Error("먼저 EML을 변환해 주세요.");
-    const status=$("#htmlStatus"), preview=$("#preview");
-    const cfg=saveGithubSettings(false);
-    status.textContent="미리보기를 파트너센터용 이미지로 준비하는 중...";
-
-    await waitForImages(preview);
-    await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
-
-    const pr=preview.getBoundingClientRect();
-    const rendered=await html2canvas(preview,{
-      scale:1,
-      useCORS:true,
-      allowTaint:false,
-      backgroundColor:"#ffffff",
-      logging:false,
-      scrollX:0,
-      scrollY:0,
-      windowWidth:document.documentElement.scrollWidth,
-      windowHeight:document.documentElement.scrollHeight
-    });
-    const rx=rendered.width/pr.width, ry=rendered.height/pr.height;
-
-    function rectOf(el){
-      const r=el.getBoundingClientRect();
-      return {left:r.left-pr.left,top:r.top-pr.top,right:r.right-pr.left,bottom:r.bottom-pr.top,width:r.width,height:r.height};
-    }
-    function captureRect(rect,quality=.82){
-      const x=rect.left*rx,y=rect.top*ry,w=rect.width*rx,h=rect.height*ry;
-      const c=cropCanvas(rendered,x,y,w,h);
-      return {dataUrl:jpegData(c,quality),width:c.width,height:c.height};
-    }
-
-    const captures=[];
-    const keyword=preview.querySelector(".keyword");
-    if(keyword){
-      const kr=rectOf(keyword);
-      const cap=captureRect({left:0,top:0,width:pr.width,height:kr.bottom},.84);
-      captures.push({...cap,label:"Trend Report Weekly Keyword",links:[]});
-    }
-
-    const bars=[...preview.querySelectorAll(".bar")];
-    if(bars[1]){
-      const br=rectOf(bars[1]);
-      const pad=18;
-      const rect={left:0,top:Math.max(0,br.top-pad),width:pr.width,height:Math.min(pr.height,br.bottom+pad)-Math.max(0,br.top-pad)};
-      const cap=captureRect(rect,.84);
-      captures.push({...cap,label:"New Media",links:[]});
-    }
-
-    const groupEls=[...preview.querySelectorAll("#pvMedia .group")];
-    groupEls.forEach(group=>{
-      const title=group.querySelector(".group-title");
-      if(title){
-        const tr=rectOf(title);
-        const mediaRect=preview.querySelector("#pvMedia").getBoundingClientRect();
-        const left=mediaRect.left-pr.left;
-        const width=mediaRect.width;
-        const cap=captureRect({left,top:tr.top,width,height:tr.height},.84);
-        captures.push({...cap,label:title.textContent.trim(),links:[]});
-      }
-
-      const cardEls=[...group.querySelectorAll(".content-card")];
-      for(let i=0;i<cardEls.length;i+=2){
-        const rowCards=cardEls.slice(i,i+2);
-        const rects=rowCards.map(rectOf);
-        const mediaRect=preview.querySelector("#pvMedia").getBoundingClientRect();
-        const left=mediaRect.left-pr.left;
-        const right=mediaRect.right-pr.left;
-        const top=Math.min(...rects.map(r=>r.top));
-        const bottom=Math.max(...rects.map(r=>r.bottom));
-        const rect={left,top,width:right-left,height:bottom-top};
-        const cap=captureRect(rect,.82);
-        const links=[];
-        rowCards.forEach((card,idx)=>{
-          const a=card.querySelector("a[href]");
-          if(!a)return;
-          const ar=rectOf(a);
-          links.push({
-            href:a.href,
-            label:(card.querySelector("h3")?.textContent||`콘텐츠 ${i+idx+1}`).trim(),
-            left:pct(ar.left-rect.left,rect.width),
-            top:pct(ar.top-rect.top,rect.height),
-            width:pct(ar.width,rect.width),
-            height:pct(ar.height,rect.height)
-          });
-        });
-        captures.push({...cap,label:"Trend content",links});
-      }
-    });
-
-    const footer=preview.querySelector(".footer");
-    if(footer){
-      const fr=rectOf(footer);
-      const cap=captureRect({left:0,top:fr.top,width:pr.width,height:fr.height},.84);
-      captures.push({...cap,label:"G마켓 파트너센터 안내",links:[]});
-    }
-
-    const prefix=reportAssetPrefix();
-    const parts=[];
-    for(let i=0;i<captures.length;i++){
-      status.textContent=`이미지 자동 업로드 중... ${i+1}/${captures.length}`;
-      const cap=captures[i];
-      const uploaded=await uploadDataUrlToGithub(cap.dataUrl,`${prefix}-${String(i+1).padStart(2,"0")}.jpg`);
-      parts.push(cap.links.length
-        ? linkedSliceHtml(uploaded.url,cap.width,cap.height,cap.links,cap.label)
-        : sliceHtml(uploaded.url,cap.width,cap.height,cap.label));
-    }
-
-    status.textContent=`업로드 완료. ${captures.length}개 이미지를 ${cfg.owner}/${cfg.repo}/${cfg.folder}에 저장했습니다.`;
-    return `<div class="trend-report-post" style="width:100%;max-width:980px;margin:0 auto;background:#fff">${parts.join("")}</div><p><br></p><p><br></p>`;
-  }
-
-  async function copyText(text){
-    try{await navigator.clipboard.writeText(text)}catch(e){
-      const t=document.createElement("textarea");t.value=text;t.style.position="fixed";t.style.left="-9999px";document.body.appendChild(t);t.select();document.execCommand("copy");t.remove();
-    }
-  }
-
-  $("#saveGithubSettings").onclick=()=>{
-    try{saveGithubSettings(true)}catch(err){$("#githubStatus").textContent="저장 실패: "+err.message}
-  };
-
-  $("#testGithubSettings").onclick=async()=>{
-    try{await testGithubConnection()}catch(err){$("#githubStatus").textContent="연결 실패: "+err.message}
-  };
-
-  $("#copyGithubHtml").onclick=async()=>{
-    const btn=$("#copyGithubHtml"), status=$("#htmlStatus");
-    btn.disabled=true;btn.textContent="HTML 만드는 중...";
-    status.textContent="이미지 업로드 + 파트너센터 HTML 생성을 시작합니다...";
-    try{
-      const html=await buildPartnerHtml();
-      $("#resultHtml").value=html;
-      $("#downloadHtml").disabled=false;
-      $("#copyHtml").disabled=false;
-      status.textContent="완료: Base64 없이 공개 이미지 URL로 파트너센터 HTML을 만들었습니다. 아래에서 복사하거나 다운로드하세요.";
-      $("#htmlResultSection").scrollIntoView({behavior:"smooth",block:"start"});
-      btn.textContent="HTML 생성 완료";
-      setTimeout(()=>btn.textContent="파트너센터 HTML 생성",1400);
-    }catch(err){
-      console.error(err);
-      status.textContent="HTML 생성 실패: "+err.message;
-      alert("HTML 생성 실패: "+err.message);
-      btn.textContent="파트너센터 HTML 생성";
-    }finally{btn.disabled=false;}
-  };
-
-  $("#copyHtml").onclick=async()=>{
-    const html=$("#resultHtml").value;
-    if(!html){alert("먼저 파트너센터 HTML을 생성해 주세요.");return;}
-    await copyText(html);
-    $("#htmlStatus").textContent="HTML 전체를 복사했습니다.";
-  };
-
-  $("#downloadHtml").onclick=()=>{
-    const html=$("#resultHtml").value;
-    if(!html){alert("먼저 파트너센터 HTML을 생성해 주세요.");return;}
-    const fullHtml=`<!doctype html>\n<html lang="ko">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width,initial-scale=1">\n<title>Trend Report</title>\n<style>html,body{margin:0;padding:0;background:#fff}img{display:block;max-width:100%;height:auto}</style>\n</head>\n<body>\n${html}\n</body>\n</html>`;
-    const blob=new Blob([fullHtml],{type:"text/html;charset=utf-8"});
-    const url=URL.createObjectURL(blob),a=document.createElement("a");
-    a.href=url;a.download="trend-report-partnercenter.html";document.body.appendChild(a);a.click();a.remove();
-    setTimeout(()=>URL.revokeObjectURL(url),1200);
-    $("#htmlStatus").textContent="HTML 파일 1개로 저장했습니다.";
-  };
-
-  loadGithubSettings();
   today();
   render();
 })();
