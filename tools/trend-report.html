@@ -92,12 +92,8 @@
     z-index:2;letter-spacing:-.035em;
     box-shadow:0 3px 8px rgba(0,126,203,.06);
   }
-  /* 선을 미리보기 끝까지 밀지 않고 양쪽에 28px 안전 여백을 둬 캡처 시 튀어나와 보이지 않게 함 */
-  .bar::before{
-    content:"";position:absolute;z-index:-1;left:50%;top:50%;
-    width:924px;height:2px;background:var(--green);
-    transform:translate(-50%,-50%);
-  }
+  /* Weekly Keyword / New Media 배지 바깥으로 선이 튀어나오지 않도록 가로선을 제거 */
+  .bar::before{content:none!important;}
   .bar::after{
     content:"";position:absolute;inset:0;border-radius:999px;
     background:linear-gradient(90deg,var(--green) 0 45%,var(--blue) 72%);z-index:-1;
@@ -166,7 +162,6 @@
     .keyword,.media{padding-left:22px;padding-right:22px}
     .grid{gap:20px 12px}
     .bar{min-width:270px;font-size:25px;padding:13px 38px}
-    .bar::before{width:calc(100vw - 56px);max-width:924px}
     .footer{padding-left:28px;padding-right:28px}
   }
 
