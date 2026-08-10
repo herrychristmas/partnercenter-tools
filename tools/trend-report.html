@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Trend Report Generator v29 · 8IMG Link Fix</title>
+<title>Trend Report Generator v29 · 8IMG Overlay Final</title>
 <style>
   :root{
     --green:#00c83c;
@@ -158,7 +158,7 @@
 <body>
 <div class="app">
   <aside class="panel">
-    <h1>Trend Report Generator <small style="font-size:11px;color:#2890ff">V29 · 8IMG LINK FIX</small></h1>
+    <h1>Trend Report Generator <small style="font-size:11px;color:#2890ff">V29 · 8IMG OVERLAY FINAL</small></h1>
     <div class="sub">EML을 넣으면 제목·이미지를 자동 추출하고, 완성된 트렌드 리포트를 Weekly Keyword와 채널별 이미지로 나눠 ZIP으로 저장합니다.</div>
 
     <div class="section">
@@ -1082,82 +1082,54 @@
 
 
 
-  function getPlatformGeometry(group){
+  function getOverlayRects(group){
     const preview=$("#preview");
     const pr=preview.getBoundingClientRect();
     const groupEls=[...preview.querySelectorAll("#pvMedia .group")];
     const groupEl=groupEls.find(el=>(el.querySelector(".platform-name")?.textContent||"").trim()===group);
-    if(!groupEl) return null;
+    if(!groupEl)return [];
 
     const gr=groupEl.getBoundingClientRect();
 
-    // ZIP 생성 때 플랫폼 이미지는 preview 전체 폭으로,
-    // group 위 12px / 아래 12px를 포함해서 잘랐음.
+    // ZIP에서 플랫폼 이미지는 group 상단 12px, 하단 12px 여유를 포함해 저장됨.
     const cropTop=(gr.top-pr.top)-12;
-    const sourceWidth=pr.width;
+    const cropHeight=gr.height+24;
+    const cropWidth=pr.width;
 
-    const cardEls=[...groupEl.querySelectorAll(".content-card")];
-    const rects=cardEls.map(el=>{
+    return [...groupEl.querySelectorAll(".content-card")].map(el=>{
       const r=el.getBoundingClientRect();
       return {
-        x:r.left-pr.left,
-        y:(r.top-pr.top)-cropTop,
-        w:r.width,
-        h:r.height
+        left: ((r.left-pr.left)/cropWidth)*100,
+        top: (((r.top-pr.top)-cropTop)/cropHeight)*100,
+        width: (r.width/cropWidth)*100,
+        height: (r.height/cropHeight)*100
       };
     });
-
-    const title=groupEl.querySelector(".group-title");
-    let headerHeight=92;
-    if(title){
-      const tr=title.getBoundingClientRect();
-      headerHeight=Math.max(74,Math.round((tr.bottom-gr.top)+22));
-    }
-
-    return {sourceWidth,rects,headerHeight};
   }
 
-  function linkedPlatformCard(platformUrl,card,rect,sourceWidth,label=""){
-    if(!card||!rect)return "";
+  function platformImageWithLinks(url,cards,group,index){
+    const rects=getOverlayRects(group);
+    let overlays="";
 
-    // 핵심:
-    // 카드의 실제 rect를 기준으로 동일한 플랫폼 이미지 한 장을 정확히 이동/확대한다.
-    // sourceWidth / cardWidth 비율만큼 이미지를 확대하고,
-    // x/cardWidth, y/cardWidth 비율만큼 좌/상단을 이동한다.
-    const imageWidthPct=(sourceWidth/rect.w)*100;
-    const leftPct=-(rect.x/rect.w)*100;
-    const topPct=-(rect.y/rect.w)*100;
-    const heightPct=(rect.h/rect.w)*100;
+    cards.forEach((card,i)=>{
+      if(!card?.link || !rects[i])return;
+      const r=rects[i];
 
-    const crop=
-      `<div style="position:relative;width:100%;padding-top:${heightPct.toFixed(4)}%;overflow:hidden;background:#fff">`+
-        `<img src="${esc(platformUrl)}" alt="${esc(label||card.title||"")}" `+
-        `style="position:absolute;left:${leftPct.toFixed(4)}%;top:${topPct.toFixed(4)}%;width:${imageWidthPct.toFixed(4)}%;height:auto;max-width:none;border:0;margin:0;padding:0">`+
+      // 비어 있는 <a>는 일부 에디터가 제거할 수 있어 내부에 투명 span을 둔다.
+      overlays+=
+        `<a href="${esc(card.link)}" target="_blank" rel="noopener noreferrer" `+
+        `aria-label="${esc(card.title||"콘텐츠 보기")}" `+
+        `style="position:absolute;left:${r.left.toFixed(4)}%;top:${r.top.toFixed(4)}%;`+
+        `width:${r.width.toFixed(4)}%;height:${r.height.toFixed(4)}%;display:block;`+
+        `z-index:5;text-decoration:none;background:rgba(255,255,255,0.001);cursor:pointer">`+
+        `<span style="display:block;width:100%;height:100%;font-size:0;line-height:0;color:transparent;overflow:hidden">.</span>`+
+        `</a>`;
+    });
+
+    return `<div style="max-width:1000px;margin:0 auto;position:relative;line-height:0">`+
+      `<img src="${esc(url)}" alt="${esc(group)}" style="display:block;width:100%;height:auto;border:0;margin:0;padding:0">`+
+      overlays+
       `</div>`;
-
-    return card.link
-      ? `<a href="${esc(card.link)}" target="_blank" rel="noopener noreferrer" style="display:block;text-decoration:none;border:0">${crop}</a>`
-      : crop;
-  }
-
-  function linkedPlatformGrid(platformUrl,cards,group){
-    const geo=getPlatformGeometry(group);
-    if(!geo) return "";
-
-    let html='<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;border-collapse:collapse;table-layout:fixed">';
-    for(let i=0;i<cards.length;i+=2){
-      const left=linkedPlatformCard(platformUrl,cards[i],geo.rects[i],geo.sourceWidth,cards[i]?.title||"");
-      const right=cards[i+1]
-        ? linkedPlatformCard(platformUrl,cards[i+1],geo.rects[i+1],geo.sourceWidth,cards[i+1]?.title||"")
-        : "";
-
-      html+=`<tr>`+
-        `<td width="50%" valign="top" style="width:50%;padding:0 9px 20px 0;border-bottom:1px solid #e6eaef">${left}</td>`+
-        `<td width="50%" valign="top" style="width:50%;padding:0 0 20px 9px;border-bottom:1px solid #e6eaef">${right}</td>`+
-      `</tr>`;
-    }
-    html+='</table>';
-    return html;
   }
 
   $("#partnerSource").addEventListener("input",()=>{
@@ -1186,47 +1158,53 @@
 
       const byGroup=getCurrentCardsByGroup();
       const activeGroups=groups.filter(g=>(byGroup[g]||[]).length);
-      const expected=2+activeGroups.length+1; // cover + new media + each platform + footer
+      const expected=2+activeGroups.length+1; // cover + New Media + 각 플랫폼 + footer
 
       if(partnerImageUrls.length<expected){
         result.value="";
-        status.textContent=`이미지 ${partnerImageUrls.length}개 감지 / 필요한 이미지 ${expected}개입니다. ZIP JPG를 전부 업로드한 뒤 코드를 다시 붙여넣어 주세요.`;
+        status.textContent=`이미지 ${partnerImageUrls.length}개 감지 / 필요한 이미지 ${expected}개입니다. ZIP의 JPG를 전부 업로드한 뒤 코드를 다시 붙여넣어 주세요.`;
         return;
       }
 
       let p=0;
       const blocks=[];
 
-      // cover + weekly
-      blocks.push(`<div style="max-width:1000px;margin:0 auto;line-height:0">${plainImage(partnerImageUrls[p++],"Trend Report Weekly Keyword")}</div>`);
+      // 01 Cover + Weekly — 원본 이미지 그대로
+      blocks.push(
+        `<div style="max-width:1000px;margin:0 auto;line-height:0">`+
+        plainImage(partnerImageUrls[p++],"Trend Report Weekly Keyword")+
+        `</div>`
+      );
 
-      // New Media
-      blocks.push(`<div style="max-width:1000px;margin:0 auto;line-height:0">${plainImage(partnerImageUrls[p++],"New Media")}</div>`);
+      // 02 New Media — 원본 이미지 그대로
+      blocks.push(
+        `<div style="max-width:1000px;margin:0 auto;line-height:0">`+
+        plainImage(partnerImageUrls[p++],"New Media")+
+        `</div>`
+      );
 
-      // one uploaded image per platform; same URL reused for clickable cropped cards
-      activeGroups.forEach(group=>{
+      // 플랫폼별 이미지 한 장 그대로 + 실제 카드 위치에 링크만 overlay
+      activeGroups.forEach((group,gi)=>{
         const platformUrl=partnerImageUrls[p++];
-        const list=byGroup[group]||[];
-
-        // keep the platform header visible using the original whole image, shallow crop
-        const geo=getPlatformGeometry(group);
-        const headerH=geo?.headerHeight||92;
-        blocks.push(
-          `<div style="max-width:1000px;margin:0 auto;background:#fff;overflow:hidden;height:${headerH}px;line-height:0">`+
-          `<img src="${esc(platformUrl)}" alt="${esc(group)}" style="display:block;width:100%;height:auto;border:0;margin:0;padding:0">`+
-          `</div>`
-        );
-        blocks.push(`<div style="max-width:1000px;margin:0 auto;background:#fff;padding:10px 58px 24px">${linkedPlatformGrid(platformUrl,list,group)}</div>`);
+        blocks.push(platformImageWithLinks(platformUrl,byGroup[group]||[],group,gi));
       });
 
-      // footer
+      // Footer — 원본 이미지 그대로
       if(partnerImageUrls[p]){
-        blocks.push(`<div style="max-width:1000px;margin:0 auto;line-height:0">${plainImage(partnerImageUrls[p++],"G마켓 파트너센터 안내")}</div>`);
+        blocks.push(
+          `<div style="max-width:1000px;margin:0 auto;line-height:0">`+
+          plainImage(partnerImageUrls[p++],"G마켓 파트너센터 안내")+
+          `</div>`
+        );
       }
 
-      result.value=`<div class="trend-report-post" style="width:100%;max-width:1000px;margin:0 auto;background:#fff">${blocks.join("")}</div><p><br></p>`;
+      result.value=
+        `<div class="trend-report-post" style="width:100%;max-width:1000px;margin:0 auto;background:#fff">`+
+        blocks.join("")+
+        `</div><p><br></p>`;
+
       const linked=cards.filter(c=>c?.link).length;
-      status.textContent=`최종 HTML 생성 완료 · 업로드 이미지 ${expected}개 · 카드 링크 ${linked}개 · 실제 카드 좌표로 crop 완료`;
+      status.textContent=`최종 HTML 생성 완료 · 이미지 ${expected}장 · 카드 링크 ${linked}개 · 원본 레이아웃 그대로`;
       result.scrollIntoView({behavior:"smooth",block:"nearest"});
     }catch(err){
       console.error(err);
