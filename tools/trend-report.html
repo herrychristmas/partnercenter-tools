@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Trend Report Generator v29 · 8IMG Overlay Final</title>
+<title>Trend Report Studio · V29</title>
 <style>
   :root{
     --green:#00c83c;
@@ -22,31 +22,41 @@
   }
   button,input,textarea,select{font:inherit}
   .app{display:grid;grid-template-columns:460px minmax(0,1fr);min-height:100vh}
-  .panel{background:#fff;border-right:1px solid #dfe3e8;padding:18px;overflow:auto}
+  .panel{
+    background:#f7f9fc;border-right:1px solid #e4e8ee;padding:24px 20px 34px;overflow:auto;
+    box-shadow:8px 0 28px rgba(31,55,90,.035);
+  }
   .preview-wrap{padding:28px;overflow:auto}
-  h1{font-size:22px;margin:0 0 6px;font-weight:900;letter-spacing:-.03em}
-  .sub{font-size:13px;color:var(--muted);margin-bottom:18px;line-height:1.55}
-  .section{border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:14px;background:#fff}
-  .section h2{font-size:17px;margin:0 0 10px;font-weight:900}
-  .drop{border:1.5px dashed #aab2bd;border-radius:12px;padding:14px;text-align:center;background:#fafbfc;cursor:pointer}
+  h1{font-size:24px;margin:0 0 8px;font-weight:1000;letter-spacing:-.045em;color:#111827}
+  .version-badge{display:inline-flex;align-items:center;margin-left:6px;padding:4px 8px;border-radius:999px;background:#eaf4ff;color:#0789d8;font-size:10px;font-weight:900;letter-spacing:0;vertical-align:middle}
+  .sub{font-size:13px;color:#6b7280;margin-bottom:20px;line-height:1.62;word-break:keep-all}
+  .section{border:1px solid #e5eaf0;border-radius:18px;padding:16px;margin-bottom:14px;background:#fff;box-shadow:0 5px 18px rgba(31,55,90,.035)}
+  .section h2{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:16px;margin:0 0 12px;font-weight:950;letter-spacing:-.025em;color:#182230}
+  .step-no{display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:22px;padding:0 7px;border-radius:999px;background:#eef7ff;color:#0789d8;font-size:10px;font-weight:1000;letter-spacing:.04em}
+  .section-note{font-size:10px;color:#7b8492;font-weight:800;margin-left:auto;letter-spacing:0}
+  .drop{border:1.5px dashed #b7c2cf;border-radius:14px;padding:17px 14px;text-align:center;background:#fbfcfe;cursor:pointer;font-weight:800;color:#374151;transition:.18s ease}
+  .drop:hover{border-color:#6cb7ea;background:#f4faff}
   .drop.drag{border-color:var(--blue);background:#eef8ff}
-  .drop small{display:block;color:var(--muted);margin-top:4px}
-  textarea{width:100%;min-height:160px;border:1px solid var(--line);border-radius:10px;padding:10px;resize:vertical}
-  input[type="text"],input[type="date"],select{width:100%;border:1px solid var(--line);border-radius:10px;padding:9px 10px;background:#fff}
+  .drop small{display:block;color:#818a98;margin-top:5px;font-weight:600;line-height:1.45}
+  textarea{width:100%;min-height:160px;border:1px solid #dfe5ec;border-radius:12px;padding:11px 12px;resize:vertical;background:#fff;outline:none}
+  textarea:focus,input[type="text"]:focus,input[type="date"]:focus,select:focus{border-color:#66b5e8;box-shadow:0 0 0 3px rgba(7,137,216,.08)}
+  input[type="text"],input[type="date"],select{width:100%;border:1px solid #dfe5ec;border-radius:12px;padding:10px 11px;background:#fff;outline:none}
   .row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
   .btns{display:flex;gap:8px;flex-wrap:wrap}
-  button{border:0;border-radius:10px;padding:11px 14px;cursor:pointer;font-weight:800}
-  .primary{background:var(--blue);color:#fff}
-  .green{background:var(--green);color:#fff}
+  button{border:0;border-radius:11px;padding:11px 14px;cursor:pointer;font-weight:900;letter-spacing:-.015em;transition:transform .15s ease,box-shadow .15s ease,opacity .15s ease}
+  button:hover{transform:translateY(-1px)}
+  button:disabled{opacity:.55;transform:none;cursor:default}
+  .primary{background:#0789d8;color:#fff;box-shadow:0 5px 12px rgba(7,137,216,.16)}
+  .green{background:#00c83c;color:#fff;box-shadow:0 5px 12px rgba(0,200,60,.14)}
   .ghost{background:#eef2f7;color:#374151}
   .danger{background:#fff0f0;color:#d33}
-  .status{font-size:12px;color:var(--muted);margin-top:8px;white-space:pre-wrap}
+  .status{font-size:12px;color:#737d8c;margin-top:8px;white-space:pre-wrap;line-height:1.55}
   .cards-edit{display:flex;flex-direction:column;gap:8px}
-  .edit-card{border:1px solid var(--line);border-radius:12px;padding:10px}
+  .edit-card{border:1px solid #e4e9ef;border-radius:14px;padding:11px;background:#fbfcfe}
   .edit-card .meta{display:grid;grid-template-columns:120px 1fr;gap:8px;margin-top:8px}
   .cover-copy{min-height:82px;line-height:1.5}
-  .section input,.section textarea,.section select{font-size:15px}
-  .thumb-mini{width:100%;height:110px;object-fit:cover;border-radius:8px;background:#f0f0f0}
+  .section input,.section textarea,.section select{font-size:14px}
+  .thumb-mini{width:100%;height:110px;object-fit:cover;border-radius:9px;background:#f0f0f0}
   .hidden{display:none!important}
 
   .preview{
@@ -80,10 +90,12 @@
     background:linear-gradient(90deg,var(--green) 0 45%,var(--blue) 72%);
     position:relative;left:50%;transform:translate(-50%,-50%);
     z-index:2;letter-spacing:-.035em;
+    box-shadow:0 3px 8px rgba(0,126,203,.06);
   }
+  /* 선을 미리보기 끝까지 밀지 않고 양쪽에 28px 안전 여백을 둬 캡처 시 튀어나와 보이지 않게 함 */
   .bar::before{
-    content:"";position:absolute;z-index:-2;left:50%;top:50%;
-    width:980px;max-width:100vw;height:3px;background:var(--green);
+    content:"";position:absolute;z-index:-1;left:50%;top:50%;
+    width:924px;height:2px;background:var(--green);
     transform:translate(-50%,-50%);
   }
   .bar::after{
@@ -122,20 +134,24 @@
     color:#111;letter-spacing:-.04em;word-break:keep-all;
   }
   .footer{
-    color:#0870d2;text-align:center;padding:66px 56px 72px;line-height:1.5;overflow:hidden;
+    position:relative;color:#0870d2;text-align:center;padding:92px 56px 76px;line-height:1.5;overflow:hidden;
+    border:0!important;outline:0!important;box-shadow:none!important;
+    /* 기존 레퍼런스처럼 위쪽은 흰색에서 자연스럽게 이어지고, 별도 페이지 경계처럼 보이는 선은 제거 */
     background:
-      radial-gradient(circle at 4% 14%,rgba(220,205,255,.72) 0 10%,rgba(255,255,255,0) 27%),
-      radial-gradient(circle at 95% 86%,rgba(206,246,255,.72) 0 11%,rgba(255,255,255,0) 28%),
-      linear-gradient(135deg,#fff 0%,#fff 58%,#f4ffe5 100%);
+      radial-gradient(circle at 7% 43%,rgba(224,210,255,.58) 0 11%,rgba(255,255,255,0) 31%),
+      radial-gradient(circle at 94% 78%,rgba(204,245,255,.64) 0 12%,rgba(255,255,255,0) 31%),
+      radial-gradient(circle at 23% 100%,rgba(218,255,192,.52) 0 12%,rgba(255,255,255,0) 31%),
+      linear-gradient(180deg,#fff 0%,#fff 12%,rgba(250,248,255,.96) 42%,rgba(245,252,255,.98) 72%,rgba(242,255,238,.96) 100%);
   }
-  .footer .footer-lead{font-size:31px;font-weight:1000;margin:0 0 28px}
-  .footer .footer-copy{font-size:24px;font-weight:900;line-height:1.65;margin:0 0 40px}
-  .footer .partner{max-width:680px;margin:0 auto;border-radius:18px;padding:22px 24px 30px;background:linear-gradient(135deg,#f7edf7,#e8f2ff 55%,#e9ffd9);color:#0870d2}
-  .footer .partner .partner-kicker{font-size:24px;font-weight:1000;margin-bottom:26px}
-  .footer .partner .partner-window{border:3px solid #5aa3ee;border-radius:18px;background:rgba(255,255,255,.16);overflow:hidden}
+  .footer::before{content:"•\A•\A•";white-space:pre;display:block;margin:-38px 0 42px;color:#0870d2;font-size:16px;line-height:.68;font-weight:1000}
+  .footer .footer-lead{font-size:31px;font-weight:1000;margin:0 0 30px;letter-spacing:-.035em}
+  .footer .footer-copy{font-size:24px;font-weight:900;line-height:1.68;margin:0 0 42px;letter-spacing:-.035em}
+  .footer .partner{max-width:680px;margin:0 auto;border:0;border-radius:18px;padding:22px 24px 30px;background:linear-gradient(135deg,rgba(247,237,247,.84),rgba(232,242,255,.9) 55%,rgba(233,255,217,.88));color:#0870d2;box-shadow:none}
+  .footer .partner .partner-kicker{font-size:24px;font-weight:1000;margin-bottom:26px;letter-spacing:-.03em}
+  .footer .partner .partner-window{border:3px solid #5aa3ee;border-radius:18px;background:rgba(255,255,255,.12);overflow:hidden}
   .footer .partner .partner-top{height:44px;border-bottom:3px solid #5aa3ee;position:relative}
   .footer .partner .partner-top::after{content:"—  □  ×";position:absolute;right:16px;top:5px;font-size:24px;font-weight:700;color:#5aa3ee}
-  .footer .partner .partner-logo{padding:48px 16px 52px;font-size:54px;font-weight:1000;letter-spacing:-.05em}
+  .footer .partner .partner-logo{padding:48px 16px 52px;font-size:54px;font-weight:1000;letter-spacing:-.055em}
   .footer .partner .cursor{font-size:44px;margin-left:8px}
 
   @media(max-width:1100px){
@@ -149,6 +165,9 @@
     .logo{font-size:58px;margin-top:120px}
     .keyword,.media{padding-left:22px;padding-right:22px}
     .grid{gap:20px 12px}
+    .bar{min-width:270px;font-size:25px;padding:13px 38px}
+    .bar::before{width:calc(100vw - 56px);max-width:924px}
+    .footer{padding-left:28px;padding-right:28px}
   }
 
   #partnerSource,#partnerHtmlResult{width:100%;resize:vertical;font-family:Consolas,monospace;font-size:12px;line-height:1.45}
@@ -158,33 +177,33 @@
 <body>
 <div class="app">
   <aside class="panel">
-    <h1>Trend Report Generator <small style="font-size:11px;color:#2890ff">V29 · 8IMG OVERLAY FINAL</small></h1>
-    <div class="sub">EML을 넣으면 제목·이미지를 자동 추출하고, 완성된 트렌드 리포트를 Weekly Keyword와 채널별 이미지로 나눠 ZIP으로 저장합니다.</div>
+    <h1>Trend Report Studio <small class="version-badge">V29</small></h1>
+    <div class="sub">EML 한 번으로 리포트 구성부터 이미지 저장, 게시용 HTML 생성까지 한 번에 정리합니다.</div>
 
     <div class="section">
-      <h2>1. Outlook 메일 파일 자동 임시 저장 불러오기</h2>
+      <h2><span class="step-no">01</span> 메일 불러오기</h2>
       <div id="emlDrop" class="drop">
         .eml 파일 클릭 또는 드래그
-        <small>Outlook에서 저장한 .eml 파일을 그대로 넣어주세요.</small>
+        <small>Outlook에서 저장한 .eml 파일을 그대로 넣어주세요. 제목·이미지·링크를 자동으로 불러옵니다.</small>
       </div>
       <input id="emlFile" class="hidden" type="file" accept=".eml,message/rfc822">
       <div class="btns" style="margin-top:10px">
-        <button id="parseEmlBtn" class="primary">EML 자동 변환</button>
+        <button id="parseEmlBtn" class="primary">메일 자동 불러오기</button>
         <button id="resetEmlBtn" class="ghost">초기화</button>
       </div>
       <div id="emlStatus" class="status"></div>
     </div>
 
     <div class="section">
-      <h2>2. 저장·내보내기 <small style="font-size:11px;color:#2890ff">플랫폼별 1장 · 카드별 링크</small></h2>
+      <h2><span class="step-no">02</span> 게시 파일 만들기 <small class="section-note">플랫폼별 1장 · 카드별 링크 유지</small></h2>
 
       <div class="btns">
-        <button id="saveLocal" class="ghost">작업 임시 저장</button>
-        <button id="loadLocal" class="ghost">임시 저장 불러오기</button>
+        <button id="saveLocal" class="ghost">현재 작업 저장</button>
+        <button id="loadLocal" class="ghost">저장 작업 불러오기</button>
       </div>
 
       <div style="margin-top:10px">
-        <button id="exportPng" class="green" style="width:100%">① 플랫폼별 고화질 JPG ZIP 저장</button>
+        <button id="exportPng" class="green" style="width:100%">① 게시 이미지 ZIP 만들기</button>
       </div>
       <div id="htmlStatus" class="status">
         커버·New Media·플랫폼별·Footer 이미지가 각각 1장씩 생성됩니다. ZIP을 풀고 전체 이미지를 한꺼번에 업로드해 주세요.
@@ -192,10 +211,10 @@
 
       <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--line)">
         <div style="font-size:15px;font-weight:1000;margin-bottom:6px">
-          ② 파트너센터 코드 붙여넣기
+          ② 업로드 코드 붙여넣기
         </div>
         <div class="status" style="margin:0 0 8px">
-          ZIP을 풀어 <b>파일명 순서 그대로 전체 선택 → 한꺼번에 업로드</b>한 뒤, 파트너센터 <b>코드 보기</b>의 HTML 전체를 한 번만 복사해 붙여넣으세요. 플랫폼마다 이미지는 1장만 올라갑니다.
+          ZIP을 풀어 <b>파일명 순서 그대로 전체 선택 → 한꺼번에 업로드</b>한 뒤, 파트너센터 <b>코드 보기</b>의 HTML 전체를 아래에 한 번만 붙여넣으세요.
         </div>
 
         <textarea
@@ -206,8 +225,8 @@
         ></textarea>
 
         <div class="btns" style="margin-top:8px">
-          <button id="extractPartnerImages" class="ghost">③ 이미지 주소 자동 추출</button>
-          <button id="makePartnerHtml" class="primary">④ 최종 HTML 생성</button>
+          <button id="extractPartnerImages" class="ghost">③ 업로드 이미지 확인</button>
+          <button id="makePartnerHtml" class="primary">④ 게시용 HTML 만들기</button>
         </div>
 
         <div id="partnerStatus" class="status">이미지 주소 0개</div>
@@ -216,17 +235,17 @@
           id="partnerHtmlResult"
           readonly
           style="min-height:150px;margin-top:8px"
-          placeholder="최종 HTML이 여기에 생성됩니다."
+          placeholder="파트너센터에 붙여넣을 게시용 HTML이 여기에 생성됩니다."
         ></textarea>
 
         <div style="margin-top:8px">
-          <button id="copyPartnerHtml" class="primary" style="width:100%">⑤ 최종 HTML 복사</button>
+          <button id="copyPartnerHtml" class="primary" style="width:100%">⑤ 게시용 HTML 복사</button>
         </div>
       </div>
     </div>
 
     <div class="section">
-      <h2>3. 기본 정보</h2>
+      <h2><span class="step-no">03</span> 리포트 기본 정보</h2>
       <div class="row">
         <input id="reportTitle" type="text" value="Trend Report" placeholder="리포트 제목">
         <input id="reportDate" type="date">
@@ -238,7 +257,7 @@
     </div>
 
     <div class="section">
-      <h2>4. Weekly Keyword 이미지</h2>
+      <h2><span class="step-no">04</span> Weekly Keyword</h2>
       <div id="keywordDrop" class="drop">
         키워드 이미지 클릭·드래그·붙여넣기
         <small>Weekly Keyword 영역을 캡처해 그대로 넣을 수 있습니다.</small>
@@ -253,8 +272,8 @@
     </div>
 
     <div class="section">
-      <h2>5. 메일 본문 붙여넣기</h2>
-      <textarea id="mailText" placeholder="EML 자동 변환이 어려울 때만 메일 본문을 복사해 붙여넣어 주세요."></textarea>
+      <h2><span class="step-no">05</span> 메일 본문 직접 입력 <small class="section-note">자동 불러오기 실패 시</small></h2>
+      <textarea id="mailText" placeholder="메일 자동 불러오기이 어려울 때만 메일 본문을 복사해 붙여넣어 주세요."></textarea>
       <div class="row" style="margin-top:8px">
         <select id="pairMode">
           <option value="auto">자동 분류</option>
@@ -264,13 +283,13 @@
           <option value="naver">전부 네이버TV</option>
           <option value="global">전부 해외 인기</option>
         </select>
-        <button id="parseMail" class="primary">붙여넣은 내용 변환</button>
+        <button id="parseMail" class="primary">본문에서 카드 만들기</button>
       </div>
       <div class="status">URL은 채널 구분에만 사용합니다. 각 채널 안에서는 제목 1번+이미지 1번 방식으로 순서대로 4개씩 묶습니다.</div>
     </div>
 
     <div class="section">
-      <h2>6. 카드 편집</h2>
+      <h2><span class="step-no">06</span> 콘텐츠 카드 편집</h2>
       <div class="btns" style="margin-bottom:10px">
         <button id="addCard" class="ghost">콘텐츠 카드 추가</button>
         <button id="clearCards" class="danger">카드 전체 삭제</button>
@@ -1135,7 +1154,7 @@
   $("#partnerSource").addEventListener("input",()=>{
     partnerImageUrls=extractImageUrls($("#partnerSource").value);
     $("#partnerStatus").textContent=partnerImageUrls.length
-      ? `이미지 주소 ${partnerImageUrls.length}개 감지됨 · 바로 ④ 최종 HTML 생성을 눌러도 됩니다.`
+      ? `이미지 주소 ${partnerImageUrls.length}개 감지됨 · 바로 ④ 게시용 HTML 만들기을 눌러도 됩니다.`
       : "이미지 주소 0개";
   });
 
@@ -1152,7 +1171,7 @@
       partnerImageUrls=extractImageUrls($("#partnerSource").value);
       if(!partnerImageUrls.length){
         result.value="";
-        status.textContent="이미지 주소를 찾지 못했습니다. ②에 파트너센터 코드 전체를 다시 붙여넣어 주세요.";
+        status.textContent="이미지 주소를 찾지 못했습니다. ②에 업로드 후 확인한 HTML 전체를 다시 붙여넣어 주세요.";
         return;
       }
 
@@ -1209,14 +1228,14 @@
     }catch(err){
       console.error(err);
       result.value="";
-      status.textContent="④ 생성 오류: "+(err?.message||String(err));
+      status.textContent="④ 게시용 HTML 생성 오류: "+(err?.message||String(err));
     }
   };
 
   $("#copyPartnerHtml").onclick=async()=>{
     const v=$("#partnerHtmlResult").value;
     if(!v){
-      $("#partnerStatus").textContent="복사할 HTML이 없습니다. 먼저 ④ 최종 HTML 생성을 눌러주세요.";
+      $("#partnerStatus").textContent="복사할 HTML이 없습니다. 먼저 ④ 게시용 HTML 만들기을 눌러주세요.";
       return;
     }
     try{
@@ -1226,7 +1245,7 @@
       box.focus();box.select();
       document.execCommand("copy");
     }
-    $("#partnerStatus").textContent="⑤ 최종 HTML 복사 완료";
+    $("#partnerStatus").textContent="⑤ 게시용 HTML 복사 완료";
   };
 
   today();
