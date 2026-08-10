@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Trend Report Generator v26 · PartnerCenter</title>
+<title>Trend Report Generator v27 · PartnerCenter</title>
 <style>
   :root{
     --green:#00c83c;
@@ -158,7 +158,7 @@
 <body>
 <div class="app">
   <aside class="panel">
-    <h1>Trend Report Generator <small style="font-size:11px;color:#2890ff">PartnerCenter V26</small></h1>
+    <h1>Trend Report Generator <small style="font-size:11px;color:#2890ff">PartnerCenter V27</small></h1>
     <div class="sub">EML을 넣으면 제목·이미지를 자동 추출하고, 완성된 트렌드 리포트를 Weekly Keyword와 채널별 이미지로 나눠 ZIP으로 저장합니다.</div>
 
     <div class="section">
@@ -1001,35 +1001,43 @@
   function normalizePartnerSource(raw){
     return String(raw||"")
       .replace(/\\</g,"<").replace(/\\>/g,">")
-      .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g,"$2")
       .replace(/&quot;/g,'"').replace(/&#x27;|&#39;/g,"'");
   }
 
   function extractImageUrls(raw){
     const src=normalizePartnerSource(raw);
     const urls=[];
-    const re=/<img\b[^>]*?\bsrc\s*=\s*["']([^"']+)["'][^>]*>/gi;
+
+    function add(u){
+      if(!u)return;
+      u=String(u).trim()
+        .replace(/^\[/,"").replace(/\]$/,"")
+        .replace(/[),.;]+$/,"");
+      if(/^https?:\/\/cdn\.imweb\.me\/upload\//i.test(u) && !urls.includes(u)){
+        urls.push(u);
+      }
+    }
+
+    const direct=src.match(/https?:\/\/cdn\.imweb\.me\/upload\/[A-Za-z0-9_./%-]+/gi)||[];
+    direct.forEach(add);
+
+    const imgRe=/<img\b[^>]*?\bsrc\s*=\s*["']([^"']+)["'][^>]*>/gi;
     let m;
-    while((m=re.exec(src))){
-      let u=m[1].trim();
-      // 사용자가 마크다운 링크 형태까지 복사한 경우 정리
-      const md=u.match(/^\[(https?:\/\/[^\]]+)\]\(https?:\/\/[^)]+\)$/);
-      if(md)u=md[1];
-      if(/^https?:\/\//i.test(u) && !urls.includes(u)) urls.push(u);
+    while((m=imgRe.exec(src))){
+      let value=m[1].trim();
+      const md=value.match(/^\[(https?:\/\/[^\]]+)\]\((https?:\/\/[^)]+)\)$/);
+      if(md)value=md[1];
+      add(value);
     }
-    // img 태그가 깨진 복사본도 대비: cdn.imweb.me 주소 직접 탐색
-    if(!urls.length){
-      const direct=src.match(/https?:\/\/cdn\.imweb\.me\/[^\s"'<>()[\]]+/gi)||[];
-      direct.forEach(u=>{u=u.replace(/[),.;]+$/,"");if(!urls.includes(u))urls.push(u)});
-    }
+
     return urls;
   }
 
   function getCurrentCardsByGroup(){
     const map={};
-    GROUPS.forEach(g=>map[g]=[]);
-    state.cards.forEach(c=>{
-      const g=GROUPS.includes(c.group)?c.group:"YouTube";
+    groups.forEach(g=>map[g]=[]);
+    cards.forEach(c=>{
+      const g=groups.includes(c.group)?c.group:"YouTube";
       map[g].push(c);
     });
     return map;
@@ -1046,15 +1054,23 @@
       const usable=85;
       const rowH=usable/rows;
       cards.forEach((c,i)=>{
-        if(!c.url)return;
+        if(!c.link)return;
         const row=Math.floor(i/2),col=i%2;
         const left=col===0?0:50;
         const top=titlePct+row*rowH;
-        overlays+=`<a href="${esc(c.url)}" target="_blank" rel="noopener" style="position:absolute;left:${left}%;top:${top}%;width:50%;height:${rowH}%;display:block;text-decoration:none"></a>`;
+        overlays+=`<a href="${esc(c.link)}" target="_blank" rel="noopener" style="position:absolute;left:${left}%;top:${top}%;width:50%;height:${rowH}%;display:block;text-decoration:none"></a>`;
       });
     }
     return `<div style="max-width:1000px;margin:0 auto;position:relative;line-height:0"><img src="${safeUrl}" alt="Trend Report ${index+1}" style="display:block;width:100%;height:auto;border:0">${overlays}</div>`;
   }
+
+
+  $("#partnerSource").addEventListener("input",()=>{
+    partnerImageUrls=extractImageUrls($("#partnerSource").value);
+    $("#partnerStatus").textContent=partnerImageUrls.length
+      ? `이미지 주소 ${partnerImageUrls.length}개 감지됨 · 바로 ④ 최종 HTML 생성을 눌러도 됩니다.`
+      : "이미지 주소 0개";
+  });
 
   $("#extractPartnerImages").onclick=()=>{
     partnerImageUrls=extractImageUrls($("#partnerSource").value);
@@ -1066,7 +1082,7 @@
   $("#makePartnerHtml").onclick=()=>{
     partnerImageUrls=extractImageUrls($("#partnerSource").value);
     if(!partnerImageUrls.length){
-      $("#partnerStatus").textContent="먼저 파트너센터 코드 HTML을 붙여넣어 주세요.";
+      $("#partnerStatus").textContent="이미지 주소를 찾지 못했습니다. 파트너센터 코드 보기의 HTML 전체를 다시 붙여넣어 주세요.";
       return;
     }
     const byGroup=getCurrentCardsByGroup();
@@ -1075,7 +1091,7 @@
     // 1: cover + weekly
     if(partnerImageUrls[p]) blocks.push(buildLinkedImageBlock(partnerImageUrls[p],[],p++));
     // 다음 이미지들: 실제 존재하는 그룹 순서대로
-    GROUPS.forEach(g=>{
+    groups.forEach(g=>{
       const cards=byGroup[g]||[];
       if(cards.length && partnerImageUrls[p]){
         blocks.push(buildLinkedImageBlock(partnerImageUrls[p],cards,p++));
@@ -1093,7 +1109,7 @@
 
   $("#copyPartnerHtml").onclick=async()=>{
     const v=$("#partnerHtmlResult").value;
-    if(!v){$("#partnerStatus").textContent="먼저 최종 HTML을 생성해 주세요.";return}
+    if(!v){$("#partnerStatus").textContent="아직 복사할 HTML이 없습니다. 먼저 ④ 최종 HTML 생성을 눌러주세요.";return}
     try{
       await navigator.clipboard.writeText(v);
       $("#partnerStatus").textContent="최종 HTML 복사 완료";
