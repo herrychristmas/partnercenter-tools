@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Trend Report Generator v30 · Final</title>
+<title>Trend Report Generator v31 · Platform Images</title>
 <style>
   :root{
     --green:#00c83c;
@@ -162,7 +162,7 @@
 <body>
 <div class="app">
   <aside class="panel">
-    <h1>Trend Report Generator <small style="font-size:11px;color:#2890ff">PartnerCenter V30 FINAL</small></h1>
+    <h1>Trend Report Generator <small style="font-size:11px;color:#2890ff">PartnerCenter V31</small></h1>
     <div class="sub">EML을 넣으면 제목·이미지를 자동 추출하고, 완성된 트렌드 리포트를 Weekly Keyword와 채널별 이미지로 나눠 ZIP으로 저장합니다.</div>
 
     <div class="section">
@@ -180,7 +180,7 @@
     </div>
 
     <div class="section">
-      <h2>2. 저장·내보내기 <small style="font-size:11px;color:#2890ff">V30 FINAL · 고화질/링크</small></h2>
+      <h2>2. 저장·내보내기 <small style="font-size:11px;color:#2890ff">V31 · 플랫폼별 1장/고화질</small></h2>
 
       <div class="btns">
         <button id="saveLocal" class="ghost">작업 임시 저장</button>
@@ -188,10 +188,10 @@
       </div>
 
       <div style="margin-top:10px">
-        <button id="exportPng" class="green" style="width:100%">① 고화질 링크용 JPG ZIP 저장</button>
+        <button id="exportPng" class="green" style="width:100%">① 플랫폼별 고화질 JPG ZIP 저장</button>
       </div>
       <div id="htmlStatus" class="status">
-        카드별 초고화질 JPG가 생성됩니다. ZIP을 풀고 전체 이미지를 한꺼번에 파트너센터에 업로드해 주세요.
+        커버·New Media·플랫폼별·Footer 이미지가 각각 1장씩 생성됩니다. ZIP을 풀고 전체 이미지를 한꺼번에 업로드해 주세요.
       </div>
 
       <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--line)">
@@ -889,12 +889,24 @@
 
   $("#exportPng").onclick=async()=>{
     const btn=$("#exportPng"),status=$("#htmlStatus"),preview=$("#preview"),oldText=btn.textContent;
-    btn.disabled=true;btn.textContent="고화질 JPG 만드는 중...";
-    status.textContent="커버·헤더·카드를 고화질 이미지로 나누는 중...";
+    btn.disabled=true;btn.textContent="플랫폼별 JPG 만드는 중...";
+    status.textContent="커버·플랫폼별 이미지를 고화질로 만드는 중...";
     try{
       await waitForImages(preview);
       await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
 
+      const pr=preview.getBoundingClientRect();
+      const rendered=await html2canvas(preview,{
+        scale:3,
+        useCORS:true,
+        allowTaint:true,
+        backgroundColor:"#ffffff",
+        logging:false,
+        scrollX:0,
+        scrollY:0
+      });
+
+      const rx=rendered.width/pr.width, ry=rendered.height/pr.height;
       const zip=new JSZip();
       const date=$("#reportDate").value||"trend-report";
       let seq=1,count=0;
@@ -905,143 +917,101 @@
           .replace(/\s+/g,"-").slice(0,50);
       }
 
-      async function nodeToJpg(node,filename,targetW=1600,quality=.97){
-        const canvas=await html2canvas(node,{
-          scale:3,
-          useCORS:true,
-          allowTaint:true,
-          backgroundColor:"#ffffff",
-          logging:false,
-          scrollX:0,
-          scrollY:0
-        });
+      function relRect(el){
+        const r=el.getBoundingClientRect();
+        return {
+          left:r.left-pr.left,
+          top:r.top-pr.top,
+          width:r.width,
+          height:r.height,
+          bottom:r.bottom-pr.top
+        };
+      }
 
-        const targetH=Math.max(1,Math.round(canvas.height*(targetW/canvas.width)));
-        const out=document.createElement("canvas");
-        out.width=targetW;out.height=targetH;
-        const ctx=out.getContext("2d");
-        ctx.fillStyle="#fff";ctx.fillRect(0,0,targetW,targetH);
+      async function addCrop(rect,filename,targetW=1600,quality=.97){
+        const sx=Math.max(0,Math.round(rect.left*rx));
+        const sy=Math.max(0,Math.round(rect.top*ry));
+        const sw=Math.max(1,Math.min(rendered.width-sx,Math.round(rect.width*rx)));
+        const sh=Math.max(1,Math.min(rendered.height-sy,Math.round(rect.height*ry)));
+
+        const targetH=Math.max(1,Math.round(sh*(targetW/sw)));
+        const c=document.createElement("canvas");
+        c.width=targetW;c.height=targetH;
+        const ctx=c.getContext("2d");
+        ctx.fillStyle="#fff";
+        ctx.fillRect(0,0,targetW,targetH);
         ctx.imageSmoothingEnabled=true;
         ctx.imageSmoothingQuality="high";
-        ctx.drawImage(canvas,0,0,targetW,targetH);
-
-        // 아주 약한 샤프닝 효과: 텍스트/썸네일 경계를 조금 더 또렷하게
-        try{
-          const imgData=ctx.getImageData(0,0,targetW,targetH);
-          const d=imgData.data;
-          const copy=new Uint8ClampedArray(d);
-          const w=targetW,h=targetH;
-          for(let y=1;y<h-1;y++){
-            for(let x=1;x<w-1;x++){
-              const i=(y*w+x)*4;
-              const up=((y-1)*w+x)*4, down=((y+1)*w+x)*4;
-              const left=(y*w+x-1)*4, right=(y*w+x+1)*4;
-              for(let c=0;c<3;c++){
-                const v=copy[i+c]*1.35-(copy[up+c]+copy[down+c]+copy[left+c]+copy[right+c])*.0875;
-                d[i+c]=Math.max(0,Math.min(255,v));
-              }
-            }
-          }
-          ctx.putImageData(imgData,0,0);
-        }catch(e){}
+        ctx.drawImage(rendered,sx,sy,sw,sh,0,0,targetW,targetH);
 
         const blob=await new Promise((resolve,reject)=>{
-          out.toBlob(b=>b?resolve(b):reject(new Error("JPG 변환 실패")),"image/jpeg",quality);
+          c.toBlob(b=>b?resolve(b):reject(new Error("JPG 변환 실패")),"image/jpeg",quality);
         });
         zip.file(filename,blob);
         count++;
       }
 
-      function makeTemp(nodes,padding="0"){
-        const wrap=document.createElement("div");
-        wrap.style.cssText=`position:fixed;left:-20000px;top:0;width:980px;background:#fff;padding:${padding};z-index:-9999`;
-        nodes.forEach(n=>wrap.appendChild(n.cloneNode(true)));
-        document.body.appendChild(wrap);
-        return wrap;
-      }
-
-      // 01. 커버 + Weekly Keyword
       const bars=[...preview.querySelectorAll(".bar")];
-      const cover=preview.querySelector(".cover");
-      const keyword=preview.querySelector(".keyword");
-      const weeklyWrap=makeTemp([cover,bars[0],keyword]);
-      await waitForImages(weeklyWrap);
-      await nodeToJpg(
-        weeklyWrap,
+
+      // 01. Cover + Weekly Keyword
+      const secondBar=bars[1];
+      const coverWeeklyBottom=secondBar
+        ? Math.max(0,relRect(secondBar).top-8)
+        : relRect(preview.querySelector(".keyword")).bottom;
+      await addCrop(
+        {left:0,top:0,width:pr.width,height:coverWeeklyBottom},
         `${String(seq++).padStart(2,"0")}-cover-weekly-${date}.jpg`,
         1600,.97
       );
-      weeklyWrap.remove();
 
-      // 02. New Media 배너
-      if(bars[1]){
-        const mediaBarWrap=makeTemp([bars[1]],"30px 0 10px");
-        await nodeToJpg(
-          mediaBarWrap,
+      // 02. New Media bar
+      if(secondBar){
+        const r=relRect(secondBar);
+        await addCrop(
+          {left:0,top:Math.max(0,r.top-18),width:pr.width,height:r.height+36},
           `${String(seq++).padStart(2,"0")}-new-media-${date}.jpg`,
           1600,.97
         );
-        mediaBarWrap.remove();
       }
 
-      // 플랫폼 헤더 + 카드별 개별 이미지
+      // 03~. Each platform = one image
       const groupEls=[...preview.querySelectorAll("#pvMedia .group")];
       for(const groupEl of groupEls){
+        const r=relRect(groupEl);
         const groupName=(groupEl.querySelector(".platform-name")?.textContent||"channel").trim();
-        const title=groupEl.querySelector(".group-title");
-        if(title){
-          const headerWrap=makeTemp([title],"8px 62px 4px");
-          await nodeToJpg(
-            headerWrap,
-            `${String(seq++).padStart(2,"0")}-${cleanName(groupName)}-header-${date}.jpg`,
-            1600,.97
-          );
-          headerWrap.remove();
-        }
-
-        const cardEls=[...groupEl.querySelectorAll(".content-card")];
-        for(let i=0;i<cardEls.length;i++){
-          const card=cardEls[i];
-          const cardWrap=document.createElement("div");
-          cardWrap.style.cssText="position:fixed;left:-20000px;top:0;width:460px;background:#fff;padding:8px 10px 16px;z-index:-9999";
-          cardWrap.appendChild(card.cloneNode(true));
-          document.body.appendChild(cardWrap);
-          await waitForImages(cardWrap);
-          await nodeToJpg(
-            cardWrap,
-            `${String(seq++).padStart(2,"0")}-${cleanName(groupName)}-card-${String(i+1).padStart(2,"0")}-${date}.jpg`,
-            1380,.97
-          );
-          cardWrap.remove();
-        }
+        await addCrop(
+          {left:0,top:Math.max(0,r.top-10),width:pr.width,height:r.height+20},
+          `${String(seq++).padStart(2,"0")}-${cleanName(groupName)}-${date}.jpg`,
+          1600,.97
+        );
       }
 
-      // 마지막 안내
+      // Footer
       const footer=preview.querySelector(".footer");
       if(footer){
-        const footerWrap=makeTemp([footer]);
-        await nodeToJpg(
-          footerWrap,
+        const r=relRect(footer);
+        await addCrop(
+          {left:0,top:r.top,width:pr.width,height:r.height},
           `${String(seq++).padStart(2,"0")}-footer-${date}.jpg`,
           1600,.97
         );
-        footerWrap.remove();
       }
 
       const blob=await zip.generateAsync({type:"blob",compression:"STORE"});
       const url=URL.createObjectURL(blob),a=document.createElement("a");
-      a.download=`trend-report-link-images-${date}.zip`;
+      a.download=`trend-report-platform-images-${date}.zip`;
       a.href=url;
       document.body.appendChild(a);a.click();a.remove();
       setTimeout(()=>URL.revokeObjectURL(url),1500);
 
-      status.textContent=`저장 완료: 초고화질 JPG ${count}장 저장 완료 · 카드별 링크 구조는 그대로 유지됩니다.`;
+      status.textContent=`저장 완료: 플랫폼별 고화질 JPG ${count}장`;
     }catch(err){
       console.error(err);
-      status.textContent="고화질 JPG 저장 실패: "+err.message;
-      alert("고화질 JPG 저장 실패: "+err.message);
+      status.textContent="플랫폼별 JPG 저장 실패: "+err.message;
+      alert("플랫폼별 JPG 저장 실패: "+err.message);
     }finally{
-      btn.disabled=false;btn.textContent=oldText;
+      btn.disabled=false;
+      btn.textContent=oldText;
     }
   };
 
@@ -1123,24 +1093,51 @@
     return map;
   }
 
-  function plainImage(url,label=""){
-    return `<img src="${esc(url)}" alt="${esc(label)}" style="display:block;width:100%;height:auto;border:0;margin:0;padding:0">`;
+  function buildPlatformMap(mapName,cards){
+    if(!cards||!cards.length)return "";
+    const cols=2;
+    const rows=Math.ceil(cards.length/2);
+
+    // group image layout percentages based on current CSS:
+    // header approx 12%, card area starts below it
+    const headerPct=13;
+    const bottomPadPct=2;
+    const usable=100-headerPct-bottomPadPct;
+    const rowH=usable/rows;
+
+    const areas=[];
+    cards.forEach((c,i)=>{
+      if(!c?.link)return;
+      const row=Math.floor(i/cols);
+      const col=i%cols;
+      const x1=col===0 ? 0 : 50;
+      const x2=col===0 ? 50 : 100;
+      const y1=headerPct + row*rowH;
+      const y2=Math.min(100, y1+rowH);
+
+      // image map coordinates use 1000x1000 logical coordinate system
+      const coords=[
+        Math.round(x1*10),
+        Math.round(y1*10),
+        Math.round(x2*10),
+        Math.round(y2*10)
+      ].join(",");
+
+      areas.push(
+        `<area shape="rect" coords="${coords}" href="${esc(c.link)}" target="_blank" alt="${esc(c.title||"")}" style="cursor:pointer">`
+      );
+    });
+
+    return `<map name="${mapName}">${areas.join("")}</map>`;
   }
 
-  function linkedCardImage(url,card,label=""){
-    const img=plainImage(url,label||card?.title||"");
-    if(card && card.link){
-      return `<a href="${esc(card.link)}" target="_blank" rel="noopener noreferrer" style="display:block;text-decoration:none;border:0">${img}</a>`;
-    }
-    return img;
+
+  function plainImage(url,label="",mapName=""){
+    const usemap=mapName?` usemap="#${mapName}"`:"";
+    return `<img src="${esc(url)}" alt="${esc(label)}"${usemap} style="display:block;width:100%;height:auto;border:0;margin:0;padding:0">`;
   }
 
-  function twoColumnRow(leftHtml,rightHtml=""){
-    return `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;border-collapse:collapse;table-layout:fixed"><tr>`+
-      `<td width="50%" valign="top" style="width:50%;padding:0 7px 16px 0">${leftHtml}</td>`+
-      `<td width="50%" valign="top" style="width:50%;padding:0 0 16px 7px">${rightHtml}</td>`+
-      `</tr></table>`;
-  }
+
 
 
   $("#partnerSource").addEventListener("input",()=>{
@@ -1170,7 +1167,7 @@
 
       const byGroup=getCurrentCardsByGroup();
       const activeGroups=groups.filter(g=>(byGroup[g]||[]).length);
-      const expected=1 + 1 + activeGroups.reduce((sum,g)=>sum+1+(byGroup[g]||[]).length,0) + 1;
+      const expected=2 + activeGroups.length + 1; // cover + new media + groups + footer
 
       if(partnerImageUrls.length < expected){
         result.value="";
@@ -1181,27 +1178,18 @@
       let p=0;
       const blocks=[];
 
-      // 01 cover-weekly
+      // cover weekly
       blocks.push(`<div style="max-width:1000px;margin:0 auto;line-height:0">${plainImage(partnerImageUrls[p++],"Trend Report Weekly Keyword")}</div>`);
 
-      // 02 New Media
+      // new media
       blocks.push(`<div style="max-width:1000px;margin:0 auto;line-height:0">${plainImage(partnerImageUrls[p++],"New Media")}</div>`);
 
-      // 플랫폼 헤더 + 카드별 링크 이미지
-      activeGroups.forEach(group=>{
-        const list=byGroup[group]||[];
-        blocks.push(`<div style="max-width:1000px;margin:0 auto;line-height:0">${plainImage(partnerImageUrls[p++],group)}</div>`);
-
-        for(let i=0;i<list.length;i+=2){
-          const leftCard=list[i];
-          const rightCard=list[i+1];
-          const left=linkedCardImage(partnerImageUrls[p++],leftCard,leftCard?.title||"");
-          let right="";
-          if(rightCard){
-            right=linkedCardImage(partnerImageUrls[p++],rightCard,rightCard?.title||"");
-          }
-          blocks.push(`<div style="max-width:1000px;margin:0 auto">${twoColumnRow(left,right)}</div>`);
-        }
+      // platform images with image maps
+      activeGroups.forEach((group,gi)=>{
+        const mapName=`trendmap-${gi+1}-${Date.now()}`;
+        const img=plainImage(partnerImageUrls[p++],group,mapName);
+        const map=buildPlatformMap(mapName,byGroup[group]||[]);
+        blocks.push(`<div style="max-width:1000px;margin:0 auto;line-height:0">${img}${map}</div>`);
       });
 
       // footer
@@ -1213,7 +1201,7 @@
       result.value=html;
 
       const linked=cards.filter(c=>c?.link).length;
-      status.textContent=`최종 HTML 생성 완료 · 이미지 ${expected}개 매칭 · 카드 링크 ${linked}개 직접 연결`;
+      status.textContent=`최종 HTML 생성 완료 · 플랫폼 이미지 ${expected}개 매칭 · 이미지맵 링크 ${linked}개`;
       result.scrollIntoView({behavior:"smooth",block:"nearest"});
     }catch(err){
       console.error("Partner HTML error:",err);
