@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Trend Report Generator v25 · PartnerCenter</title>
+<title>Trend Report Generator v26 · PartnerCenter</title>
 <style>
   :root{
     --green:#00c83c;
@@ -158,7 +158,7 @@
 <body>
 <div class="app">
   <aside class="panel">
-    <h1>Trend Report Generator <small style="font-size:11px;color:#2890ff">PartnerCenter V25</small></h1>
+    <h1>Trend Report Generator <small style="font-size:11px;color:#2890ff">PartnerCenter V26</small></h1>
     <div class="sub">EML을 넣으면 제목·이미지를 자동 추출하고, 완성된 트렌드 리포트를 Weekly Keyword와 채널별 이미지로 나눠 ZIP으로 저장합니다.</div>
 
     <div class="section">
@@ -177,12 +177,52 @@
 
     <div class="section">
       <h2>2. 저장·내보내기</h2>
+
       <div class="btns">
         <button id="saveLocal" class="ghost">작업 임시 저장</button>
         <button id="loadLocal" class="ghost">임시 저장 불러오기</button>
-        <button id="exportPng" class="green">섹션별 이미지 ZIP 저장</button>
       </div>
-      <div id="htmlStatus" class="status">EML 변환 후 ‘섹션별 이미지 ZIP 저장’을 눌러주세요.</div>
+
+      <div style="margin-top:10px">
+        <button id="exportPng" class="green" style="width:100%">① 가벼운 JPG ZIP 저장</button>
+      </div>
+      <div id="htmlStatus" class="status">
+        먼저 JPG ZIP을 저장한 뒤, 파트너센터에 이미지들을 한꺼번에 업로드해 주세요.
+      </div>
+
+      <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--line)">
+        <div style="font-size:15px;font-weight:1000;margin-bottom:6px">
+          ② 파트너센터 코드 붙여넣기
+        </div>
+        <div class="status" style="margin:0 0 8px">
+          파트너센터에서 <b>코드 보기</b>를 연 뒤, 이미지가 들어있는 HTML 전체를 복사해서 아래에 한 번만 붙여넣으세요.
+        </div>
+
+        <textarea
+          id="partnerSource"
+          style="min-height:130px"
+          placeholder='<p><img src="https://cdn.imweb.me/...jpg"></p>
+<p><img src="https://cdn.imweb.me/...jpg"></p>'
+        ></textarea>
+
+        <div class="btns" style="margin-top:8px">
+          <button id="extractPartnerImages" class="ghost">③ 이미지 주소 자동 추출</button>
+          <button id="makePartnerHtml" class="primary">④ 최종 HTML 생성</button>
+        </div>
+
+        <div id="partnerStatus" class="status">이미지 주소 0개</div>
+
+        <textarea
+          id="partnerHtmlResult"
+          readonly
+          style="min-height:150px;margin-top:8px"
+          placeholder="최종 HTML이 여기에 생성됩니다."
+        ></textarea>
+
+        <div style="margin-top:8px">
+          <button id="copyPartnerHtml" class="primary" style="width:100%">⑤ 최종 HTML 복사</button>
+        </div>
+      </div>
     </div>
 
     <div class="section">
