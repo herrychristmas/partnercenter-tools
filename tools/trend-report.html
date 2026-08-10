@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Trend Report Generator v29 · Design Polish</title>
+<title>Trend Report Generator v29 · PartnerCenter</title>
 <style>
   :root{
     --green:#00c83c;
@@ -66,16 +66,16 @@
   .logo{
     position:relative;z-index:1;margin-top:118px;
     font-family:"Gmarket Sans","Pretendard","Apple SD Gothic Neo",sans-serif;
-    color:#0570cf;font-weight:1000;font-size:118px;line-height:.97;letter-spacing:-.06em;
+    color:#0570cf;font-weight:1000;font-size:112px;line-height:.98;letter-spacing:-.06em;
     text-align:center;
   }
   .logo small{
     display:block;max-width:700px;margin:50px auto 0;color:#0870d2;
-    font-size:30px;line-height:1.62;letter-spacing:-.03em;font-weight:900;
+    font-size:29px;line-height:1.62;letter-spacing:-.03em;font-weight:900;
   }
   .bar{
     display:flex;align-items:center;justify-content:center;
-    color:#fff;font-weight:1000;font-size:31px;min-width:320px;width:max-content;
+    color:#fff;font-weight:1000;font-size:29px;min-width:300px;width:max-content;
     padding:15px 54px;border-radius:999px;
     background:linear-gradient(90deg,var(--green) 0 45%,var(--blue) 72%);
     position:relative;left:50%;transform:translate(-50%,-50%);
@@ -92,14 +92,14 @@
   }
   .keyword{padding:46px 64px 58px;margin-top:-12px}
   .keyword img{width:100%;display:block;border-radius:0}
-  .keyword-text{white-space:pre-wrap;line-height:1.82;font-size:17px;font-weight:650}
+  .keyword-text{white-space:pre-wrap;line-height:1.78;font-size:16px;font-weight:600}
   .media{padding:42px 62px 84px;margin-top:-10px}
-  .group{margin-top:44px;padding-top:0}
+  .group{margin-top:36px;padding-top:0}
   .group:first-child{margin-top:0}
   .group-title{
     min-height:54px;margin:0 0 18px;padding:0 18px 8px 0;
     display:flex;align-items:center;gap:9px;position:relative;
-    color:#111;font-size:31px;font-weight:1000;letter-spacing:-.045em;
+    color:#111;font-size:30px;font-weight:1000;letter-spacing:-.045em;
     font-family:"Tenada","Gmarket Sans","Pretendard","Apple SD Gothic Neo",sans-serif;
     border-bottom:4px solid var(--green);
   }
@@ -111,18 +111,14 @@
   .platform-logo svg{width:100%;height:100%;display:block}
   .platform-logo.logo-global{font-size:30px;background:#eef8ff}
   .group-title .platform-name{display:inline-block}
-  .grid{display:grid;grid-template-columns:1fr 1fr;gap:40px 26px}
-  .content-card{
-    min-width:0;
-    padding-bottom:18px;
-    border-bottom:1.5px solid #e7ebf0;
-  }
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:34px 24px}
+  .content-card{min-width:0}
   .content-card a{color:inherit;text-decoration:none;display:block}
   .content-card img{
     width:100%;aspect-ratio:16/9;object-fit:cover;background:#f2f2f2;display:block;
   }
   .content-card h3{
-    font-size:23px;line-height:1.5;margin:14px 0 0;font-weight:900;
+    font-size:22px;line-height:1.52;margin:13px 0 0;font-weight:900;
     color:#111;letter-spacing:-.04em;word-break:keep-all;
   }
   .footer{
@@ -132,8 +128,8 @@
       radial-gradient(circle at 95% 86%,rgba(206,246,255,.72) 0 11%,rgba(255,255,255,0) 28%),
       linear-gradient(135deg,#fff 0%,#fff 58%,#f4ffe5 100%);
   }
-  .footer .footer-lead{font-size:30px;font-weight:1000;margin:0 0 28px}
-  .footer .footer-copy{font-size:24px;font-weight:900;line-height:1.64;margin:0 0 40px}
+  .footer .footer-lead{font-size:28px;font-weight:1000;margin:0 0 28px}
+  .footer .footer-copy{font-size:23px;font-weight:900;line-height:1.62;margin:0 0 38px}
   .footer .partner{max-width:680px;margin:0 auto;border-radius:18px;padding:22px 24px 30px;background:linear-gradient(135deg,#f7edf7,#e8f2ff 55%,#e9ffd9);color:#0870d2}
   .footer .partner .partner-kicker{font-size:24px;font-weight:1000;margin-bottom:26px}
   .footer .partner .partner-window{border:3px solid #5aa3ee;border-radius:18px;background:rgba(255,255,255,.16);overflow:hidden}
@@ -162,7 +158,7 @@
 <body>
 <div class="app">
   <aside class="panel">
-    <h1>Trend Report Generator <small style="font-size:11px;color:#2890ff">PartnerCenter V29 · Design Polish</small></h1>
+    <h1>Trend Report Generator <small style="font-size:11px;color:#2890ff">PartnerCenter V29</small></h1>
     <div class="sub">EML을 넣으면 제목·이미지를 자동 추출하고, 완성된 트렌드 리포트를 Weekly Keyword와 채널별 이미지로 나눠 ZIP으로 저장합니다.</div>
 
     <div class="section">
@@ -905,9 +901,9 @@
           .replace(/\s+/g,"-").slice(0,50);
       }
 
-      async function nodeToJpg(node,filename,targetW=1400,quality=.96){
+      async function nodeToJpg(node,filename,targetW=1200,quality=.94){
         const canvas=await html2canvas(node,{
-          scale:2.8,
+          scale:2.2,
           useCORS:true,
           allowTaint:true,
           backgroundColor:"#ffffff",
@@ -949,7 +945,7 @@
       await nodeToJpg(
         weeklyWrap,
         `${String(seq++).padStart(2,"0")}-cover-weekly-${date}.jpg`,
-        1500,.96
+        1200,.95
       );
       weeklyWrap.remove();
 
@@ -959,7 +955,7 @@
         await nodeToJpg(
           mediaBarWrap,
           `${String(seq++).padStart(2,"0")}-new-media-${date}.jpg`,
-          1500,.96
+          1200,.95
         );
         mediaBarWrap.remove();
       }
@@ -974,7 +970,7 @@
           await nodeToJpg(
             headerWrap,
             `${String(seq++).padStart(2,"0")}-${cleanName(groupName)}-header-${date}.jpg`,
-            1500,.96
+            1200,.95
           );
           headerWrap.remove();
         }
@@ -990,7 +986,7 @@
           await nodeToJpg(
             cardWrap,
             `${String(seq++).padStart(2,"0")}-${cleanName(groupName)}-card-${String(i+1).padStart(2,"0")}-${date}.jpg`,
-            1200,.96
+            900,.95
           );
           cardWrap.remove();
         }
@@ -1003,7 +999,7 @@
         await nodeToJpg(
           footerWrap,
           `${String(seq++).padStart(2,"0")}-footer-${date}.jpg`,
-          1500,.96
+          1200,.95
         );
         footerWrap.remove();
       }
