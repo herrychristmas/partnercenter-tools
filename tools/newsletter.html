@@ -102,6 +102,13 @@ function normalize(v){return String(v||'').replace(/\s+/g,' ').trim()}
 function getNum(url){const f=String(url||'').split(/[?#]/)[0].split('/').pop();const m=f.match(/_(\d{2})\.(jpg|jpeg|png|webp|gif)$/i);return m?Number(m[1]):null}
 function linkOf(img){const a=img.closest('a');return a?(a.getAttribute('href')||'').trim():''}
 function coverUrl(){const v=els.thumbnailUrls.value.trim();return /^https?:\/\//i.test(v)?v:''}
+function assetKey(url){
+  return String(url||'')
+    .trim()
+    .replace(/^https?:/i,'')
+    .split(/[?#]/)[0]
+    .replace(/\/+$/,'');
+}
 function parseSource(html){
   const doc=new DOMParser().parseFromString(html,'text/html'),monthly=[];
   doc.querySelectorAll('img[src]').forEach(img=>{const src=(img.getAttribute('src')||'').trim(),number=getNum(src);if(number===null)return;monthly.push({src,number,alt:normalize(img.getAttribute('alt')),link:linkOf(img),survey:/설문|만족도|survey|23idp/i.test((img.getAttribute('alt')||'')+' '+linkOf(img))})});
@@ -132,7 +139,14 @@ function generate(){
   if(!newCover){show('bad','파트너센터용 표지 이미지 주소 1개를 입력해 주세요.');setMetrics(0,0,'오류','bad');return}
   const monthly=parseSource(source);
   if(monthly.length<3){show('bad','파일명 끝에 _01, _02처럼 번호가 붙은 이미지를 충분히 찾지 못했습니다.');setMetrics(0,1,'오류','bad');return}
-  const originalCover=monthly[0],survey=monthly.find(x=>x.survey),body=monthly.filter((x,i)=>i!==0&&(!survey||x.src!==survey.src)),groups=[];
+  const originalCover=monthly[0],survey=monthly.find(x=>x.survey);
+  const channelKey=assetKey(els.channelImage.value.trim());
+  const body=monthly.filter((x,i)=>{
+    if(i===0)return false;
+    if(survey&&x.src===survey.src)return false;
+    if(channelKey&&assetKey(x.src)===channelKey)return false;
+    return true;
+  }),groups=[];
   for(let i=0;i<body.length;i+=2)groups.push([body[i],body[i+1]||null]);
   let out=`<div class="sellog-carousel-post" data-color="#00C853">\n\n<div><img src="${esc(newCover)}" class="fr-fic fr-dii">${channelBlock()}</div>`;
   groups.forEach((g,i)=>out+=`\n${contentBlock(i+1,g,'')}`);
