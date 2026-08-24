@@ -117,6 +117,8 @@ textarea:focus,input:focus,select:focus{border-color:#8ba5c4;box-shadow:0 0 0 3p
 .helper{font-size:11px;color:#7b8492;line-height:1.5;margin-top:8px}
 .toolbar-row{display:flex;gap:8px;flex-wrap:wrap}
 .sep{height:1px;background:var(--line);margin:14px 0}
+.publish-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:11px}.publish-head h2{margin:0}.publish-tools{display:flex;gap:5px}.publish-tools button{padding:6px 8px;border-radius:8px;font-size:10px}.publish-flow{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}.publish-flow button{min-width:0;padding:10px 4px;border-radius:9px;font-size:10.5px;white-space:nowrap}.publish-flow .flow-main{background:var(--blue);color:#fff}.publish-flow .flow-green{background:var(--green);color:#fff}.publish-flow .flow-dark{background:#222;color:#fff}.publish-status{margin-top:9px;padding:8px 10px;border-radius:9px;background:#f4f7fa;color:#667085;font-size:11px;line-height:1.45}
+.upload-dialog{width:min(620px,calc(100vw - 28px));max-height:84vh;border:0;border-radius:18px;padding:0;box-shadow:0 24px 70px rgba(15,23,42,.25);overflow:hidden}.upload-dialog::backdrop{background:rgba(15,23,42,.48)}.dialog-head{display:flex;align-items:center;justify-content:space-between;padding:17px 18px;border-bottom:1px solid var(--line);background:#fff}.dialog-head h3{margin:0;font-size:17px}.dialog-close{width:34px;height:34px;padding:0;border-radius:9px;background:#eef2f7;color:#344054}.dialog-body{padding:18px;overflow:auto;max-height:calc(84vh - 69px)}.dialog-group{padding-bottom:16px;margin-bottom:16px;border-bottom:1px solid var(--line)}.dialog-group:last-child{border-bottom:0;margin-bottom:0;padding-bottom:0}.dialog-label{display:block;font-size:13px;font-weight:950;margin-bottom:7px}.dialog-help{font-size:11px;color:#737d8c;line-height:1.5;margin:0 0 8px}
 @media(max-width:1100px){
   .app{grid-template-columns:1fr}
   .panel{border-right:0;border-bottom:1px solid var(--line)}
@@ -170,7 +172,42 @@ textarea:focus,input:focus,select:focus{border-color:#8ba5c4;box-shadow:0 0 0 3p
     </div>
 
     <div class="section">
-      <h2><span class="step-no">03</span> 기본 정보</h2>
+      <div class="publish-head">
+        <h2><span class="step-no">03</span> 빠른 게시</h2>
+        <div class="publish-tools"><button id="saveWork" class="ghost">저장</button><button id="loadWork" class="ghost">불러오기</button></div>
+      </div>
+      <div class="publish-flow">
+        <button id="exportImages" class="flow-green">① ZIP</button>
+        <button id="openUploadDialog" class="ghost">② 코드</button>
+        <button id="extractImages" class="ghost">③ 확인</button>
+        <button id="makeHtml" class="flow-main">④ HTML</button>
+        <button id="copyHtml" class="flow-dark">⑤ 복사</button>
+      </div>
+      <div id="publishStatus" class="publish-status">PDF 분석 후 ① ZIP부터 순서대로 진행해 주세요.</div>
+
+      <dialog id="uploadDialog" class="upload-dialog">
+        <div class="dialog-head"><h3>업로드 코드 및 이미지 설정</h3><button id="closeUploadDialog" class="dialog-close" aria-label="닫기">✕</button></div>
+        <div class="dialog-body">
+          <div class="dialog-group">
+            <label class="dialog-label" for="partnerSource">파트너센터 업로드 코드</label>
+            <p class="dialog-help">ZIP 이미지를 파일명 순서대로 전체 업로드한 뒤, 파트너센터 코드 보기의 HTML 전체를 붙여넣으세요.</p>
+            <textarea id="partnerSource" style="min-height:150px" placeholder='<p><img src="https://cdn.imweb.me/upload/...png"></p>'></textarea>
+          </div>
+          <div class="dialog-group">
+            <label class="dialog-label" for="logoUrl">상단 G마켓 로고 이미지 주소</label>
+            <input id="logoUrl" type="text" placeholder="https://cdn.imweb.me/upload/.../gmarket-logo.png">
+            <p class="dialog-help" style="margin-top:7px">한 번 입력하면 이 브라우저에 저장되어 다음 작업에도 유지됩니다.</p>
+          </div>
+          <div class="dialog-group">
+            <label class="dialog-label" for="htmlResult">생성된 게시용 HTML</label>
+            <textarea id="htmlResult" readonly style="min-height:150px" placeholder="④ HTML을 누르면 여기에 생성됩니다."></textarea>
+          </div>
+        </div>
+      </dialog>
+    </div>
+
+    <div class="section">
+      <h2><span class="step-no">04</span> 기본 정보</h2>
       <div class="row">
         <input id="issueDate" type="date">
         <input id="issueNo" type="text" placeholder="16호">
@@ -180,7 +217,7 @@ textarea:focus,input:focus,select:focus{border-color:#8ba5c4;box-shadow:0 0 0 3p
     </div>
 
     <div class="section">
-      <h2><span class="step-no">04</span> 콘텐츠 편집 <small class="section-note">자동 매핑 후 수정</small></h2>
+      <h2><span class="step-no">05</span> 콘텐츠 점검 <small class="section-note">필요할 때만 수정</small></h2>
       <div id="contentEditors" class="edit-list"></div>
       <div class="btns" style="margin-top:10px">
         <button id="addIssue" class="ghost">이슈 추가</button>
@@ -189,34 +226,6 @@ textarea:focus,input:focus,select:focus{border-color:#8ba5c4;box-shadow:0 0 0 3p
       </div>
     </div>
 
-    <div class="section">
-      <h2><span class="step-no">05</span> 파트너센터 게시</h2>
-      <div class="btns" style="margin-top:10px">
-        <button id="saveWork" class="ghost">현재 작업 저장</button>
-        <button id="loadWork" class="ghost">저장 작업 불러오기</button>
-      </div>
-
-      <button id="exportImages" class="green" style="width:100%;margin-top:12px">① 게시 이미지 ZIP 만들기</button>
-      <div class="status">ZIP을 풀어 파일명 순서 그대로 전체 이미지를 파트너센터에 한꺼번에 업로드해 주세요.</div>
-
-      <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--line)">
-        <b style="font-size:14px">② 업로드 코드 붙여넣기</b>
-        <div class="status">파트너센터 <b>코드 보기</b>의 HTML 전체를 아래에 붙여넣으면 이미지 주소를 자동으로 찾습니다.</div>
-        <textarea id="partnerSource" style="min-height:115px" placeholder='<p><img src="https://cdn.imweb.me/upload/...png"></p>'></textarea>
-        <button id="extractImages" class="ghost" style="width:100%;margin-top:8px">③ 업로드 이미지 확인</button>
-      </div>
-
-      <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--line)">
-        <b style="font-size:14px">상단 G마켓 로고 이미지 주소</b>
-        <input id="logoUrl" type="text" placeholder="https://cdn.imweb.me/upload/.../gmarket-logo.png" style="margin-top:7px">
-        <div class="status">로고 주소는 이 브라우저에 저장되어 다음 작업에도 유지됩니다.</div>
-      </div>
-
-      <button id="makeHtml" class="primary" style="width:100%;margin-top:14px">④ 게시용 HTML 만들기</button>
-      <div id="publishStatus" class="status">이미지 주소 0개</div>
-      <textarea id="htmlResult" readonly style="margin-top:8px;min-height:150px" placeholder="파트너센터에 붙여넣을 HTML이 생성됩니다."></textarea>
-      <button id="copyHtml" class="primary" style="width:100%;margin-top:8px">⑤ 게시용 HTML 복사</button>
-    </div>
   </aside>
 
   <main class="preview-wrap">
@@ -647,14 +656,18 @@ $("#addTrend").onclick=()=>{DATA.trends.push({key:"trend-"+Date.now(),title:"새
 $("#saveWork").onclick=()=>{localStorage.setItem("bdNewsletterStudio",JSON.stringify({DATA,meta:{date:$("#issueDate").value,no:$("#issueNo").value,title:$("#reportTitle").value,intro:$("#introText").value}}));localStorage.setItem("bdNewsletterLogoUrl",$("#logoUrl").value);$("#buildStatus").textContent="현재 작업을 이 브라우저에 저장했습니다."};
 $("#loadWork").onclick=()=>{const raw=localStorage.getItem("bdNewsletterStudio");if(!raw)return alert("저장된 작업이 없습니다.");const s=JSON.parse(raw);DATA=s.DATA;$("#issueDate").value=s.meta.date;$("#issueNo").value=s.meta.no;$("#reportTitle").value=s.meta.title;$("#introText").value=s.meta.intro;$("#logoUrl").value=localStorage.getItem("bdNewsletterLogoUrl")||"";renderEditors();renderPreview();mapStatus()};
 $("#exportImages").onclick=async()=>{const btn=$("#exportImages"),old=btn.textContent;btn.disabled=true;btn.textContent="이미지 ZIP 만드는 중...";try{await exportImageZip()}catch(err){console.error(err);$("#publishStatus").textContent="ZIP 생성 실패: "+err.message}finally{btn.disabled=false;btn.textContent=old}};
+$("#openUploadDialog").onclick=()=>$("#uploadDialog").showModal();
+$("#closeUploadDialog").onclick=()=>$("#uploadDialog").close();
+$("#uploadDialog").addEventListener("click",e=>{if(e.target===$("#uploadDialog"))$("#uploadDialog").close()});
 $("#partnerSource").addEventListener("input",()=>{const count=extractPartnerImageUrls($("#partnerSource").value).length;$("#publishStatus").textContent=`이미지 주소 ${count}개 감지`});
-$("#extractImages").onclick=()=>applyPartnerImages(true);
+$("#extractImages").onclick=()=>{if(!clean($("#partnerSource").value)){$("#uploadDialog").showModal();$("#partnerSource").focus();$("#publishStatus").textContent="② 코드 팝업에 파트너센터 코드 보기 HTML을 붙여넣어 주세요.";return}applyPartnerImages(true)};
 $("#logoUrl").value=localStorage.getItem("bdNewsletterLogoUrl")||"";
 $("#logoUrl").addEventListener("input",()=>localStorage.setItem("bdNewsletterLogoUrl",$("#logoUrl").value));
 $("#makeHtml").onclick=()=>{
   if($("#newsletterPreview").classList.contains("hidden"))return alert("먼저 PDF를 분석해 미리보기를 만들어 주세요.");
+  if(!clean($("#partnerSource").value)){$("#uploadDialog").showModal();$("#partnerSource").focus();$("#publishStatus").textContent="② 코드가 필요합니다. 업로드 HTML을 붙여넣어 주세요.";return}
   if(!applyPartnerImages(true))return;
-  if(!/^https?:\/\//i.test(clean($("#logoUrl").value))){$("#publishStatus").textContent="상단 G마켓 로고 이미지 주소를 입력해 주세요.";return alert("상단 G마켓 로고 이미지 주소가 필요합니다.")}
+  if(!/^https?:\/\//i.test(clean($("#logoUrl").value))){$("#uploadDialog").showModal();$("#logoUrl").focus();$("#publishStatus").textContent="상단 G마켓 로고 이미지 주소를 입력해 주세요.";return}
   const html=buildHtml(),remaining=(html.match(/data:image\//g)||[]).length;
   if(remaining){$("#htmlResult").value="";$("#publishStatus").textContent=`base64 이미지 ${remaining}개가 남아 있어 HTML 생성을 중단했습니다.`;return}
   $("#htmlResult").value=html;$("#publishStatus").textContent=`게시용 HTML 생성 완료 · CDN 이미지 ${allContentItems().length+1}개 · base64 0개`;
