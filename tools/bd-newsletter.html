@@ -98,7 +98,7 @@ textarea:focus,input:focus,select:focus{border-color:#8ba5c4;box-shadow:0 0 0 3p
 .brand-grid.cols-5 .brand-card h3{font-size:17px;margin:12px 11px 4px}
 .brand-grid.cols-5 .brand-card p{font-size:12px;line-height:1.42;margin:0 11px 10px;min-height:35px}
 .brand-grid.cols-5 .brand-card .cta{font-size:10px;margin-left:11px;padding:6px 9px}
-.brand-card{position:relative;padding-bottom:18px;transition:transform .22s ease,box-shadow .22s ease,border-color .22s ease}
+.brand-card{position:relative;padding-bottom:18px;display:flex;flex-direction:column;transition:transform .22s ease,box-shadow .22s ease,border-color .22s ease}
 .brand-card:hover{transform:translateY(-6px);box-shadow:7px 9px 0 #e7ebee;border-color:#111}
 .brand-card:hover .media-box img{transform:scale(1.045)}
 .brand-card .media-box{height:176px;margin:0;border:0;border-bottom:1px solid #e1e5e8;border-radius:0;background:#f8f8f7}
@@ -106,6 +106,7 @@ textarea:focus,input:focus,select:focus{border-color:#8ba5c4;box-shadow:0 0 0 3p
 .badge.soon{background:var(--lime)}
 .brand-card h3{font:950 21px/1.25 var(--display-font);margin:15px 14px 5px}
 .brand-card p{font-size:14px;line-height:1.45;color:#464c52;margin:0 14px 12px;min-height:40px;font-weight:650}
+.brand-card .cta{margin-top:auto;align-self:flex-start}
 .cta{display:inline-block;margin-left:14px;border:1.3px solid #333;border-radius:999px;padding:7px 11px;font-size:12px;font-weight:900;text-decoration:none;color:#222;background:#fff;transition:.18s ease}
 .cta:not(.disabled):hover{background:#222;color:#fff;transform:translateY(-1px)}
 .cta.disabled{opacity:.45;pointer-events:none}
@@ -157,7 +158,7 @@ textarea:focus,input:focus,select:focus{border-color:#8ba5c4;box-shadow:0 0 0 3p
 <body>
 <div class="app">
   <aside class="panel">
-    <h1>BD Newsletter Studio <small class="version-badge">V3.1</small></h1>
+    <h1>BD Newsletter Studio <small class="version-badge">V3.2</small></h1>
     <div class="sub">PDF 한 번으로 뉴스레터 구조를 읽고, 내용·이미지·링크를 점검한 뒤 파트너센터용 HTML까지 만드는 작업용 툴입니다.</div>
 
     <div class="section">
@@ -265,17 +266,17 @@ function clean(s){return String(s||"").replace(/\s+/g," ").trim()}
 function squash(s){return String(s||"").replace(/\s+/g,"").trim()}
 function styledText(value,allowBr=false){
   const marks=[
-    ["뷰티 브랜드 성장 전략 세미나","rich-green"],["오는 9월 7일 신세계 남산 오디토리움","rich-orange"],
-    ["마스크 누적 1억 장 이상 판매, 태국 왓슨스 시트마스크 7년 연속 1위","rich-green"],
-    ["국내외에서 탄탄한 인지도","rich-yellow"],["합리적인 가격","rich-yellow"],
-    ["새 학기 준비","rich-green"],["다양한 사용 환경과 취향","rich-green"],["넉넉한 수납공간과 텀블러 포켓","rich-green"],
-    ...PDF_STYLE_RUNS.map(r=>[r.text,r.cls])
-  ].filter(([text])=>clean(text).length>1).sort((a,b)=>b[0].length-a[0].length);
+    {text:"뷰티 브랜드 성장 전략 세미나",cls:"rich-green"},{text:"오는 9월 7일 신세계 남산 오디토리움",cls:"rich-orange"},
+    {text:"마스크 누적 1억 장 이상 판매, 태국 왓슨스 시트마스크 7년 연속 1위",cls:"rich-green"},
+    {text:"국내외에서 탄탄한 인지도",cls:"rich-yellow"},{text:"합리적인 가격",cls:"rich-yellow"},
+    {text:"새 학기 준비",cls:"rich-green"},{text:"다양한 사용 환경과 취향",cls:"rich-green"},{text:"넉넉한 수납공간과 텀블러 포켓",cls:"rich-green"},
+    ...PDF_STYLE_RUNS
+  ].filter(r=>clean(r.text).length>1).sort((a,b)=>b.text.length-a.text.length);
   let s=esc(value),tokens=[];
-  marks.forEach(([text,cls])=>{
+  marks.forEach(({text,cls,style})=>{
     const needle=esc(clean(text));if(!needle||!s.includes(needle))return;
     const token=`___PDFSTYLE_${tokens.length}___`;
-    tokens.push(`<span class="${cls}">${needle}</span>`);s=s.split(needle).join(token);
+    tokens.push(style?`<span style="${style}">${needle}</span>`:`<span class="${cls}">${needle}</span>`);s=s.split(needle).join(token);
   });
   tokens.forEach((html,i)=>{s=s.split(`___PDFSTYLE_${i}___`).join(html)});
   if(allowBr)s=s.replace(/&lt;br\s*\/?&gt;/gi,"<br>");
@@ -300,19 +301,26 @@ function detectPdfStyleRuns(){
     const w=Math.max(4,Math.min(canvas.width-x,Math.ceil((it.width||text.length*6)*scale)));
     const hh=Math.max(4,Math.min(canvas.height-y,Math.ceil(h*1.35)));
     let data;try{data=ctx.getImageData(x,y,w,hh).data}catch(e){return}
-    let yellow=0,green=0,orange=0,colored=0;
+    let yellow=0,sampled=0;const hueBins=Array.from({length:12},()=>({n:0,r:0,g:0,b:0}));
     for(let p=0;p<data.length;p+=16){
-      const r=data[p],g=data[p+1],b=data[p+2],a=data[p+3];if(a<100)continue;
-      if(r>225&&g>195&&b<155){yellow++;colored++}
-      else if(g>90&&g>r*1.18&&g>b*1.08){green++;colored++}
-      else if(r>180&&g>55&&g<175&&b<135){orange++;colored++}
+      const r=data[p],g=data[p+1],b=data[p+2],a=data[p+3];if(a<100)continue;sampled++;
+      if(r>225&&g>195&&b<155)yellow++;
+      const max=Math.max(r,g,b),min=Math.min(r,g,b),delta=max-min;
+      if(delta<55||max<90||max>245&&min>210)continue;
+      let hue=0;if(delta){if(max===r)hue=60*(((g-b)/delta)%6);else if(max===g)hue=60*((b-r)/delta+2);else hue=60*((r-g)/delta+4)}if(hue<0)hue+=360;
+      const bin=hueBins[Math.floor(hue/30)%12];bin.n++;bin.r+=r;bin.g+=g;bin.b+=b;
     }
     const family=String(textStyles[it.fontName]?.fontFamily||"");
     const isBold=/bold|black|heavy|semibold|extrabold/i.test(family);
-    let cls="";if(yellow>=3&&yellow>=green&&yellow>=orange)cls="rich-yellow";else if(green>=2&&green>=orange)cls="rich-green";else if(orange>=2)cls="rich-orange";else if(isBold)cls="pdf-bold";
-    if(cls)runs.push({text,cls});
+    const dominant=hueBins.sort((a,b)=>b.n-a.n)[0];let cls="",style="";
+    if(sampled&&yellow/sampled>.12)cls="rich-yellow";
+    else if(dominant.n>=10&&dominant.n/sampled>.018){
+      const r=Math.round(dominant.r/dominant.n),g=Math.round(dominant.g/dominant.n),b=Math.round(dominant.b/dominant.n);
+      style=`color:rgb(${r},${g},${b});font-family:'Gmarket Sans',Pretendard,sans-serif;font-weight:900`;
+    }else if(isBold)cls="pdf-bold";
+    if(cls||style)runs.push({text,cls,style});
   });
-  const seen=new Set();PDF_STYLE_RUNS=runs.filter(r=>{const k=r.cls+"|"+r.text;if(seen.has(k))return false;seen.add(k);return true});
+  const seen=new Set();PDF_STYLE_RUNS=runs.filter(r=>{const k=(r.cls||r.style)+"|"+r.text;if(seen.has(k))return false;seen.add(k);return true});
 }
 function cropCanvasData(crop){
   const src=$("#pdfCanvas");
@@ -735,6 +743,9 @@ function buildHtml(){
   const cta=url=>url
     ? `<a href="${esc(url)}" target="_blank" rel="noopener" style="display:inline-block;margin-top:14px;padding:8px 13px;border:1px solid #222;border-radius:999px;color:#111;text-decoration:none;font-size:13px;font-weight:800">바로가기 →</a>`
     : `<span style="display:inline-block;margin-top:14px;padding:8px 13px;border:1px solid #bbb;border-radius:999px;color:#999;font-size:13px;font-weight:800">COMING SOON</span>`;
+  const brandCta=url=>url
+    ? `<a href="${esc(url)}" target="_blank" rel="noopener" style="position:absolute;left:${compactBrands?"10":"14"}px;bottom:14px;display:inline-block;padding:7px 11px;border:1px solid #222;border-radius:999px;color:#111;text-decoration:none;font-size:11px;font-weight:800">바로가기 →</a>`
+    : `<span style="position:absolute;left:${compactBrands?"10":"14"}px;bottom:14px;display:inline-block;padding:7px 11px;border:1px solid #bbb;border-radius:999px;color:#999;font-size:11px;font-weight:800">COMING SOON</span>`;
 
   const singleIssue=DATA.issues.length===1;
   const issueCells=singleIssue?(()=>{
@@ -754,9 +765,9 @@ function buildHtml(){
   for(let i=0;i<DATA.brands.length;i+=brandCols){
     const count=Math.min(brandCols,DATA.brands.length-i);
     const row=DATA.brands.slice(i,i+brandCols).map(x=>`<td width="${brandWidth}" valign="top" style="width:${brandWidth};padding:0 ${compactBrands?"5":"7"}px 14px;box-sizing:border-box">
-      <div style="min-height:${brandMinH}px;border:1px solid #222;border-radius:16px;overflow:hidden;background:#fff;box-sizing:border-box">
+      <div style="position:relative;min-height:${brandMinH}px;padding-bottom:52px;border:1px solid #222;border-radius:16px;overflow:hidden;background:#fff;box-sizing:border-box">
         <img src="${img(x)}" alt="" width="${brandImageW}" height="${brandImageH}" style="display:block!important;width:100%!important;max-width:${brandImageW}px!important;height:${brandImageH}px!important;margin:0 auto!important;object-fit:contain!important;background:#f6f6f6">
-        <div style="padding:${compactBrands?"11px 10px 13px":"14px 14px 16px"}"><div style="font-size:${brandTitleSize}px;line-height:1.3;font-weight:900;color:#111">${markedShort(x.name)}</div><div style="margin-top:5px;font-size:${brandCopySize}px;line-height:1.5;color:#333">${markedShort(x.copy)}</div>${cta(x.url)}</div>
+        <div style="padding:${compactBrands?"11px 10px 8px":"14px 14px 8px"}"><div style="font-size:${brandTitleSize}px;line-height:1.3;font-weight:900;color:#111">${markedShort(x.name)}</div><div style="margin-top:5px;font-size:${brandCopySize}px;line-height:1.5;color:#333">${markedShort(x.copy)}</div></div>${brandCta(x.url)}
       </div></td>`).join("");
     brandRows.push(`<tr>${row}${`<td width="${brandWidth}"></td>`.repeat(brandCols-count)}</tr>`);
   }
