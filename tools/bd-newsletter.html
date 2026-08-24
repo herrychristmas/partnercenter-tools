@@ -1,0 +1,665 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BD Newsletter Studio · PDF → Web</title>
+<style>
+@font-face{
+  font-family:"Gmarket Sans";
+  src:url("https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/GmarketSansMedium.woff") format("woff");
+  font-weight:500;
+  font-style:normal;
+  font-display:swap;
+}
+@font-face{
+  font-family:"Gmarket Sans";
+  src:url("https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/GmarketSansBold.woff") format("woff");
+  font-weight:700 1000;
+  font-style:normal;
+  font-display:swap;
+}
+:root{
+  --ink:#16181b;--muted:#6b7280;--line:#e3e7ec;--panel:#f7f9fc;--blue:#345d9d;
+  --green:#3f7358;--green-soft:#eef5ef;--pink:#f6e9ed;--lime:#f2f4e5;--sky:#edf3f7;
+  --paper:#fff;--soft:#f8fafb;--warn:#9b6a2a;
+  --display-font:"Gmarket Sans","GmarketSansBold","Pretendard","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{font-family:"Wanted Sans","Pretendard","Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",Arial,sans-serif;background:#eef2f6;color:var(--ink);font-weight:500}
+button,input,textarea,select{font:inherit}
+.app{display:grid;grid-template-columns:460px minmax(0,1fr);min-height:100vh}
+.panel{background:var(--panel);border-right:1px solid #e4e8ee;padding:24px 20px 34px;overflow:auto;box-shadow:8px 0 28px rgba(31,55,90,.035)}
+.preview-wrap{padding:28px;overflow:auto}
+h1{font-size:24px;margin:0 0 8px;font-weight:1000;letter-spacing:-.045em;color:#111827}
+.version-badge{display:inline-flex;align-items:center;margin-left:6px;padding:4px 8px;border-radius:999px;background:#edf3fb;color:var(--blue);font-size:10px;font-weight:900}
+.sub{font-size:13px;color:#6b7280;margin-bottom:20px;line-height:1.62;word-break:keep-all}
+.section{border:1px solid #e5eaf0;border-radius:18px;padding:16px;margin-bottom:14px;background:#fff;box-shadow:0 5px 18px rgba(31,55,90,.035)}
+.section h2{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:16px;margin:0 0 12px;font-weight:950;letter-spacing:-.025em;color:#182230}
+.step-no{display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:22px;padding:0 7px;border-radius:999px;background:#eef3fb;color:var(--blue);font-size:10px;font-weight:1000}
+.section-note{font-size:10px;color:#7b8492;font-weight:800;margin-left:auto}
+.drop{border:1.5px dashed #b7c2cf;border-radius:14px;padding:18px 14px;text-align:center;background:#fbfcfe;cursor:pointer;font-weight:850;color:#374151;transition:.18s ease}
+.drop:hover,.drop.drag{border-color:#8aa8ce;background:#f3f7fc}
+.drop small{display:block;color:#818a98;margin-top:5px;font-weight:600;line-height:1.45}
+.hidden{display:none!important}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+button{border:0;border-radius:11px;padding:11px 14px;cursor:pointer;font-weight:900;letter-spacing:-.015em;transition:.15s ease}
+button:hover{transform:translateY(-1px)}
+button:disabled{opacity:.5;cursor:default;transform:none}
+.primary{background:var(--blue);color:#fff;box-shadow:0 5px 12px rgba(52,93,157,.15)}
+.green{background:var(--green);color:#fff;box-shadow:0 5px 12px rgba(63,115,88,.14)}
+.ghost{background:#eef2f7;color:#374151}
+.danger{background:#fff0f0;color:#c43d3d}
+.status{font-size:12px;color:#737d8c;margin-top:8px;white-space:pre-wrap;line-height:1.55}
+textarea,input[type="text"],input[type="date"],select{width:100%;border:1px solid #dfe5ec;border-radius:12px;padding:10px 11px;background:#fff;outline:none;font-size:14px}
+textarea{min-height:110px;resize:vertical}
+textarea:focus,input:focus,select:focus{border-color:#8ba5c4;box-shadow:0 0 0 3px rgba(52,93,157,.08)}
+.edit-list{display:flex;flex-direction:column;gap:10px}
+.edit-card{border:1px solid #e4e9ef;border-radius:14px;padding:11px;background:#fbfcfe}
+.edit-card .meta{display:grid;grid-template-columns:110px 1fr;gap:8px;margin-top:8px}
+.mini-thumb{width:100%;height:92px;object-fit:cover;border-radius:9px;background:#f0f0f0;border:1px solid #e3e7eb}
+.map-ok{color:#31704d;font-weight:900} .map-warn{color:var(--warn);font-weight:900}
+.pill{display:inline-flex;align-items:center;padding:4px 8px;border-radius:999px;font-size:10px;font-weight:900;background:#eef2f7;color:#56606d}
+.pill.issue{background:var(--pink);color:#674d56} .pill.brand{background:var(--sky);color:#4c6476} .pill.trend{background:var(--lime);color:#5f6741}
+
+.preview{width:1040px;max-width:100%;margin:0 auto;background:#fff;box-shadow:0 12px 35px rgba(0,0,0,.08);overflow:hidden}
+.news{padding:34px 40px 58px;background:#fff}
+.news-top{display:flex;align-items:center;justify-content:space-between;padding:20px 22px;border:1.5px solid #2f3338;box-shadow:4px 4px 0 #eef0f2}
+.news-brand{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.news-brand img{width:140px;height:auto;display:block}
+.news-title{font:950 20px/1.15 var(--display-font);background:var(--sky);border:1.5px solid #333;padding:9px 11px}
+.news-issue{border:1.5px solid #333;border-radius:999px;padding:9px 13px;font-size:13px;font-weight:900}
+.news-intro{margin:15px 0 36px;background:#222;color:#fff;padding:13px 16px;font-size:14px;line-height:1.55;font-weight:700}
+.block{margin-top:40px}
+.block-head{margin-bottom:14px}
+.block-head h2{margin:0;font:950 30px/1.25 var(--display-font);letter-spacing:-1.25px}
+.block-head h2:before{content:"✦";color:var(--green);margin-right:7px}
+.block-head p{margin:7px 0 0;font-size:14px;color:#565b61;font-weight:700}
+.issue-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.content-card{border:1.5px solid #34373a;border-radius:17px;overflow:hidden;background:#fff;box-shadow:3px 3px 0 #eef0f2}
+.issue-card{padding:22px}
+.kicker{display:inline-block;background:var(--lime);border:1.5px solid #34373a;padding:7px 9px;font:900 11px/1 var(--display-font);margin-bottom:13px}
+.issue-card h3{font:950 27px/1.32 var(--display-font);margin:0 0 14px;letter-spacing:-1.15px}
+.issue-card p{font-size:15px;line-height:1.76;color:#30353a;margin:0;word-break:keep-all}
+.media-box{margin:15px 0 14px;border:1px solid #e1e5e8;border-radius:11px;overflow:hidden;background:#fff;height:176px;display:flex;align-items:center;justify-content:center}
+.media-box img{width:100%;height:100%;display:block;object-fit:cover;background:#fff;transition:transform .28s ease}
+.brand-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.brand-card{position:relative;padding-bottom:18px;transition:transform .22s ease,box-shadow .22s ease,border-color .22s ease}
+.brand-card:hover{transform:translateY(-6px);box-shadow:7px 9px 0 #e7ebee;border-color:#111}
+.brand-card:hover .media-box img{transform:scale(1.045)}
+.brand-card .media-box{height:176px;margin:0;border:0;border-bottom:1px solid #e1e5e8;border-radius:0;background:#f8f8f7}
+.badge{position:absolute;left:9px;top:9px;z-index:2;border:1px solid #555;border-radius:999px;padding:4px 7px;font-size:9px;font-weight:950;background:var(--pink)}
+.badge.soon{background:var(--lime)}
+.brand-card h3{font:950 21px/1.25 var(--display-font);margin:15px 14px 5px}
+.brand-card p{font-size:14px;line-height:1.45;color:#464c52;margin:0 14px 12px;min-height:40px;font-weight:650}
+.cta{display:inline-block;margin-left:14px;border:1.3px solid #333;border-radius:999px;padding:7px 11px;font-size:12px;font-weight:900;text-decoration:none;color:#222;background:#fff;transition:.18s ease}
+.cta:not(.disabled):hover{background:#222;color:#fff;transform:translateY(-1px)}
+.cta.disabled{opacity:.45;pointer-events:none}
+.trend-list{border:1.5px solid #34373a;border-radius:17px;overflow:hidden;background:#fff}
+.trend-row{display:grid;grid-template-columns:230px 1fr;gap:24px;padding:24px;border-top:1px dashed #a8adb2;align-items:center}
+.trend-row:first-child{border-top:0}
+.trend-row .media-box{height:158px;margin:0}
+.trend-copy h3{font:950 23px/1.36 var(--display-font);margin:0 0 9px}
+.trend-copy .hl{display:inline;background:linear-gradient(transparent 55%,#eef2b8 55%);font-size:15px;font-weight:900;line-height:1.65}
+.trend-copy p{font-size:14.5px;line-height:1.76;color:#3f454b;margin:10px 0 0;word-break:keep-all}
+.trend-copy .cta{margin:12px 0 0}
+.rich-green{color:#39a768;font-weight:900}
+.rich-orange{color:#ff7a43;font-weight:900}
+.rich-yellow{background:linear-gradient(transparent 40%,#fff06a 40%);font-weight:900}
+.news-title,.news-issue,.block-head h2,.kicker,.badge,.brand-card h3,.trend-copy h3,.trend-copy .hl,.cta,
+.rich-green,.rich-orange,.rich-yellow{font-family:var(--display-font)}
+.preview-empty{min-height:650px;display:flex;align-items:center;justify-content:center;text-align:center;color:#8b929b;font-weight:800;padding:40px}
+.preview-empty b{display:block;color:#4d5661;font-size:22px;margin-bottom:8px}
+.raw-preview{margin-top:12px;border:1px solid #dfe4e8;border-radius:12px;overflow:hidden;background:#fff}
+.raw-preview canvas{width:100%;height:auto;display:block}
+.helper{font-size:11px;color:#7b8492;line-height:1.5;margin-top:8px}
+.toolbar-row{display:flex;gap:8px;flex-wrap:wrap}
+.sep{height:1px;background:var(--line);margin:14px 0}
+@media(max-width:1100px){
+  .app{grid-template-columns:1fr}
+  .panel{border-right:0;border-bottom:1px solid var(--line)}
+  .preview-wrap{padding:16px}
+}
+@media(max-width:760px){
+  .preview{width:100%}.news{padding:22px 16px 40px}
+  .issue-grid{grid-template-columns:1fr}.brand-grid{grid-template-columns:repeat(2,1fr)}.trend-row{grid-template-columns:1fr}
+}
+
+.card-link,.text-link,.trend-media-link,.issue-media-link{
+  color:inherit;text-decoration:none;
+}
+.card-link{display:block}
+.card-link.content-card{height:100%;box-sizing:border-box}
+.card-link h3,.text-link h3{color:inherit}
+.card-link:hover h3,.text-link:hover h3{text-decoration:underline;text-underline-offset:3px}
+.card-link:focus-visible{outline:3px solid rgba(52,93,157,.28);outline-offset:3px}
+.trend-media-link,.issue-media-link{display:block}
+
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="panel">
+    <h1>BD Newsletter Studio <small class="version-badge">V1.0</small></h1>
+    <div class="sub">PDF 한 번으로 뉴스레터 구조를 읽고, 내용·이미지·링크를 점검한 뒤 파트너센터용 HTML까지 만드는 작업용 툴입니다.</div>
+
+    <div class="section">
+      <h2><span class="step-no">01</span> PDF 불러오기</h2>
+      <div id="pdfDrop" class="drop">
+        PDF 파일 클릭 또는 드래그
+        <small>뉴스레터 PDF를 넣으면 텍스트·링크·페이지 이미지를 먼저 읽습니다.</small>
+      </div>
+      <input id="pdfFile" class="hidden" type="file" accept=".pdf,application/pdf">
+      <div class="btns" style="margin-top:10px">
+        <button id="parsePdfBtn" class="primary">PDF 자동 분석</button>
+        <button id="resetBtn" class="ghost">초기화</button>
+      </div>
+      <div id="pdfStatus" class="status">PDF를 넣어주세요.</div>
+      <div id="rawPreview" class="raw-preview hidden"><canvas id="pdfCanvas"></canvas></div>
+    </div>
+
+    <div class="section">
+      <h2><span class="step-no">02</span> 자동 구성 <small class="section-note">ISSUE → BRAND → TREND</small></h2>
+      <div class="toolbar-row">
+        <button id="autoBuildBtn" class="green" style="flex:1">섹션 자동 구성</button>
+        <button id="mapBtn" class="ghost">매핑 점검</button>
+      </div>
+      <div id="buildStatus" class="status">PDF 분석 후 섹션을 구성합니다.</div>
+    </div>
+
+    <div class="section">
+      <h2><span class="step-no">03</span> 기본 정보</h2>
+      <div class="row">
+        <input id="issueDate" type="date">
+        <input id="issueNo" type="text" placeholder="16호">
+      </div>
+      <input id="reportTitle" type="text" value="Weekly New Brand News" style="margin-top:8px">
+      <textarea id="introText" style="margin-top:8px">Business Development 팀은 미입점/퇴점 브랜드 대상으로 입점 계약 영업을 전문적으로 하는 팀입니다. 많은 관심과 요청 부탁드립니다.</textarea>
+    </div>
+
+    <div class="section">
+      <h2><span class="step-no">04</span> 콘텐츠 편집 <small class="section-note">자동 매핑 후 수정</small></h2>
+      <div id="contentEditors" class="edit-list"></div>
+      <div class="btns" style="margin-top:10px">
+        <button id="addIssue" class="ghost">이슈 추가</button>
+        <button id="addBrand" class="ghost">브랜드 추가</button>
+        <button id="addTrend" class="ghost">트렌드 추가</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2><span class="step-no">05</span> 파트너센터 게시</h2>
+      <div class="btns" style="margin-top:10px">
+        <button id="saveWork" class="ghost">현재 작업 저장</button>
+        <button id="loadWork" class="ghost">저장 작업 불러오기</button>
+      </div>
+
+      <button id="exportImages" class="green" style="width:100%;margin-top:12px">① 게시 이미지 ZIP 만들기</button>
+      <div class="status">ZIP을 풀어 파일명 순서 그대로 전체 이미지를 파트너센터에 한꺼번에 업로드해 주세요.</div>
+
+      <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--line)">
+        <b style="font-size:14px">② 업로드 코드 붙여넣기</b>
+        <div class="status">파트너센터 <b>코드 보기</b>의 HTML 전체를 아래에 붙여넣으면 이미지 주소를 자동으로 찾습니다.</div>
+        <textarea id="partnerSource" style="min-height:115px" placeholder='<p><img src="https://cdn.imweb.me/upload/...png"></p>'></textarea>
+        <button id="extractImages" class="ghost" style="width:100%;margin-top:8px">③ 업로드 이미지 확인</button>
+      </div>
+
+      <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--line)">
+        <b style="font-size:14px">상단 G마켓 로고 이미지 주소</b>
+        <input id="logoUrl" type="text" placeholder="https://cdn.imweb.me/upload/.../gmarket-logo.png" style="margin-top:7px">
+        <div class="status">로고 주소는 이 브라우저에 저장되어 다음 작업에도 유지됩니다.</div>
+      </div>
+
+      <button id="makeHtml" class="primary" style="width:100%;margin-top:14px">④ 게시용 HTML 만들기</button>
+      <div id="publishStatus" class="status">이미지 주소 0개</div>
+      <textarea id="htmlResult" readonly style="margin-top:8px;min-height:150px" placeholder="파트너센터에 붙여넣을 HTML이 생성됩니다."></textarea>
+      <button id="copyHtml" class="primary" style="width:100%;margin-top:8px">⑤ 게시용 HTML 복사</button>
+    </div>
+  </aside>
+
+  <main class="preview-wrap">
+    <article id="preview" class="preview">
+      <div class="preview-empty" id="emptyPreview">
+        <div><b>PDF를 넣으면 여기에 바로 미리보기</b>왼쪽에서 자동 분석 → 매핑 점검 → 내용 수정 순서로 작업하면 됩니다.</div>
+      </div>
+      <div id="newsletterPreview" class="hidden"></div>
+    </article>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.8.69/pdf.min.mjs" type="module"></script>
+<script type="module">
+import * as pdfjsLib from "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.8.69/pdf.min.mjs";
+pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.8.69/pdf.worker.min.mjs";
+
+const $=s=>document.querySelector(s);
+let selectedPdf=null, pdfDoc=null, pageImage="", textItems=[], annotations=[];
+let DATA={issues:[],brands:[],trends:[]};
+
+const sampleBrandNames=["일리커피","삼육","로즈몽","요기보","릴리이브","미정당","리복키즈","알톤","이너시아"];
+const knownTrendNames=["모닝글로리","자바","시로카라"];
+
+function today(){
+  const d=new Date(), y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,"0"), day=String(d.getDate()).padStart(2,"0");
+  $("#issueDate").value=`${y}-${m}-${day}`;
+}
+today();
+
+function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
+function clean(s){return String(s||"").replace(/\s+/g," ").trim()}
+function squash(s){return String(s||"").replace(/\s+/g,"").trim()}
+function richText(value){
+  let s=esc(value);
+  const marks=[
+    ["뷰티 브랜드 성장 전략 세미나","rich-green"],
+    ["오는 9월 7일 신세계 남산 오디토리움","rich-orange"],
+    ["마스크 누적 1억 장 이상 판매, 태국 왓슨스 시트마스크 7년 연속 1위","rich-green"],
+    ["국내외에서 탄탄한 인지도","rich-yellow"],
+    ["합리적인 가격","rich-yellow"],
+    ["새 학기 준비","rich-green"],
+    ["다양한 사용 환경과 취향","rich-green"],
+    ["넉넉한 수납공간과 텀블러 포켓","rich-green"]
+  ];
+  marks.forEach(([text,cls])=>{s=s.split(text).join(`<span class="${cls}">${text}</span>`)});
+  s=s.replace("우즈스튜디오와 함께합니다.","우즈스튜디오와 함께합니다. 🔥");
+  s=s.replace("탄탄한 인지도를 쌓아온 브랜드입니다.","탄탄한 인지도를 쌓아온 브랜드입니다. 😻");
+  return s;
+}
+function cropCanvasData(crop){
+  const src=$("#pdfCanvas");
+  if(!src || !src.width || !src.height) return pageImage;
+  const [x,y,w,h]=String(crop||"0,0,100,100").split(",").map(Number);
+  const sx=Math.max(0,Math.min(src.width, src.width*x/100));
+  const sy=Math.max(0,Math.min(src.height, src.height*y/100));
+  const sw=Math.max(1,Math.min(src.width-sx, src.width*w/100));
+  const sh=Math.max(1,Math.min(src.height-sy, src.height*h/100));
+  const c=document.createElement("canvas");
+  c.width=Math.round(sw); c.height=Math.round(sh);
+  c.getContext("2d").drawImage(src,sx,sy,sw,sh,0,0,c.width,c.height);
+  return c.toDataURL("image/png");
+}
+function linesFromItems(items){
+  const rows=[];
+  items.forEach(it=>{
+    const y=Math.round(it.transform[5]);
+    let row=rows.find(r=>Math.abs(r.y-y)<3);
+    if(!row){row={y,items:[]};rows.push(row)}
+    row.items.push(it);
+  });
+  return rows.sort((a,b)=>b.y-a.y).map(r=>r.items.sort((a,b)=>a.transform[4]-b.transform[4]).map(i=>i.str).join(" ").trim()).filter(Boolean);
+}
+
+function extractBetween(text,start,end){
+  const s=text.indexOf(start); if(s<0)return "";
+  const e=end?text.indexOf(end,s+start.length):-1;
+  return text.slice(s+start.length,e>0?e:undefined).trim();
+}
+
+function findAnnotationLinkNear(text){
+  const t=clean(text).toLowerCase();
+  const hit=annotations.find(a=>clean(a.title||a.contents||"").toLowerCase().includes(t));
+  return hit?.url||"";
+}
+
+async function loadPdf(file){
+  const buf=await file.arrayBuffer();
+  pdfDoc=await pdfjsLib.getDocument({data:buf}).promise;
+  const page=await pdfDoc.getPage(1);
+  const viewport=page.getViewport({scale:1.7});
+  const canvas=$("#pdfCanvas"),ctx=canvas.getContext("2d");
+  canvas.width=viewport.width;canvas.height=viewport.height;
+  await page.render({canvasContext:ctx,viewport}).promise;
+  pageImage=canvas.toDataURL("image/png");
+  $("#rawPreview").classList.remove("hidden");
+  const tc=await page.getTextContent();textItems=tc.items;
+  const ann=await page.getAnnotations();
+  annotations=ann.filter(a=>a.url||a.unsafeUrl).map(a=>{
+    const vr=viewport.convertToViewportRectangle(a.rect);
+    const left=Math.min(vr[0],vr[2]), top=Math.min(vr[1],vr[3]);
+    const right=Math.max(vr[0],vr[2]), bottom=Math.max(vr[1],vr[3]);
+    return {...a,url:a.url||a.unsafeUrl||"",nrect:{
+      x:left/viewport.width*100,y:top/viewport.height*100,
+      w:(right-left)/viewport.width*100,h:(bottom-top)/viewport.height*100
+    }};
+  });
+  const lines=linesFromItems(textItems);
+  return {lines,text:lines.join("\n"),page};
+}
+
+function detectDateIssue(text){
+  const d=text.match(/20\d{2}\s*[-./]\s*\d{1,2}\s*[-./]\s*\d{1,2}/);
+  const n=text.match(/(\d{1,3})\s*호/);
+  if(d){
+    const parts=d[0].replace(/\s/g,"").replace(/[./]/g,"-").split("-").map((x,i)=>i?x.padStart(2,"0"):x);
+    $("#issueDate").value=parts.join("-");
+  }
+  if(n)$("#issueNo").value=n[1]+"호";
+}
+
+function autoParseText(text){
+  const normalized=text.replace(/\n+/g,"\n");
+  const compact=squash(normalized);
+  detectDateIssue(normalized);
+
+  const CROP={
+    // 실제 PDF 이미지 박스 기준
+    seminar:"32.955,9.773,14.920,9.481",
+    banobagi:"56.003,6.917,40.494,15.277",
+
+    illy:"5.930,34.904,21.789,8.266",
+    samyook:"50.819,34.937,21.780,8.244",
+    rosemont:"5.994,43.641,21.585,8.132",
+    lilyeve:"50.780,43.645,21.964,8.196",
+    yogibo:"5.895,52.302,21.926,8.141",
+    mijungdang:"50.780,52.247,22.003,8.246",
+    reebok:"5.943,61.002,21.727,8.154",
+    alton:"50.806,60.995,22.168,8.281",
+
+    morningglory:"7.447,73.962,23.038,7.010",
+    java:"7.447,81.756,23.038,7.010",
+    sirokara:"7.350,89.549,23.038,7.010"
+  };
+
+  const REGION={
+    illy:"5.0,34.5,45.0,8.5",
+    samyook:"50.0,34.5,45.0,8.5",
+    rosemont:"5.0,43.2,45.0,8.5",
+    lilyeve:"50.0,43.2,45.0,8.5",
+    yogibo:"5.0,51.9,45.0,8.5",
+    mijungdang:"50.0,51.9,45.0,8.5",
+    reebok:"5.0,60.6,45.0,8.5",
+    alton:"50.0,60.6,45.0,8.5",
+    morningglory:"5.0,73.2,90.0,7.5",
+    java:"5.0,81.0,90.0,7.5",
+    sirokara:"5.0,88.8,90.0,7.5"
+  };
+  function urlForRegion(region){
+    const [x,y,w,h]=String(region).split(",").map(Number);
+    const hit=annotations.find(a=>{
+      if(!a.nrect) return false;
+      const cx=a.nrect.x+a.nrect.w/2, cy=a.nrect.y+a.nrect.h/2;
+      return cx>=x && cx<=x+w && cy>=y && cy<=y+h;
+    });
+    return hit?.url||"";
+  }
+  const has=(...parts)=>parts.every(p=>compact.includes(squash(p)));
+
+  const issues=[];
+  if(has("뷰티 브랜드 성장 전략 세미나")){
+    issues.push({
+      key:"beauty-seminar",type:"issue",kicker:"COMING SOON · BEAUTY",
+      title:"미입점 뷰티 브랜드사들을 한 곳에!<br>뷰티 브랜드 성장 전략 세미나",
+      body:"G마켓이 뷰티에 전략적으로 투자하고 있다는 사실을 업계에 직접 전달하기 위해 미입점 뷰티 브랜드 대표임원을 초청해 ‘뷰티 브랜드 성장 전략 세미나’를 개최합니다. 오는 9월 7일 신세계 남산 오디토리움에서 열리는 이번 세미나는 뷰티 전문 브랜딩 스튜디오 우즈스튜디오와 함께합니다.",
+      image:cropCanvasData(CROP.seminar),crop:CROP.seminar,url:""
+    });
+  }
+  if(has("바노바기","공식 입점")){
+    issues.push({
+      key:"banobagi",type:"issue",kicker:"NEW BRAND ISSUE",
+      title:"태국에서 사랑받는 더마 브랜드,<br>바노바기 공식 입점 ✨",
+      body:"‘태국의 메디힐’로 불리는 피부과 전문의 기반 리얼 더마 브랜드 바노바기를 소개합니다. 마스크 누적 1억 장 이상 판매, 태국 왓슨스 시트마스크 7년 연속 1위를 기록하며 국내외에서 탄탄한 인지도를 쌓아온 브랜드입니다.",
+      image:cropCanvasData(CROP.banobagi),crop:CROP.banobagi,url:""
+    });
+  }
+
+  const brandDefs=[
+    ["일리커피","커피 한잔의 여유","illy"],
+    ["삼육","영양에 고소함까지 더한!","samyook"],
+    ["로즈몽","품격을 높이는 시계","rosemont","SOON"],
+    ["릴리이브","말라세지아균 99.9% 감소","lilyeve"],
+    ["요기보","둥글게 기대는 편안함","yogibo"],
+    ["미정당","매콤달콤 감칠맛","mijungdang"],
+    ["리복키즈","움직임이 즐거워지는 순간","reebok","SOON"],
+    ["알톤","수많은 라이더들의 선택","alton"]
+  ];
+  const brands=brandDefs.filter(([name])=>has(name)).map(([name,copy,key,status])=>({
+    key,name,copy,status:status||"",image:cropCanvasData(CROP[key]),crop:CROP[key],url:urlForRegion(REGION[key])
+  }));
+
+  const trendDefs=[
+    ["모닝글로리","모닝글로리 – 신학기 문구/사무용품 총집합!","# 새 학기 준비는 문구/사무용품 대표주자, 모닝글로리와 함께!","신학기가 성큼 다가오고 본격적인 하반기가 시작되는 지금! 문구/사무용품의 대표 브랜드 모닝글로리와 함께 새 학기 준비를 시작해보세요. 학생들의 신학기 준비부터 직장인들의 업무 준비까지 다양한 상품을 합리적인 가격으로 만나볼 수 있습니다.","morningglory"],
+    ["자바","자바 – 0.5 제트라인 유성볼펜","# 매일 쓰는 펜일수록 더 꼼꼼하게!","우리가 공부할 때도, 일할 때도 가장 자주 사용하는 필기구를 만드는 자바펜이 BD팀을 통해 G마켓에 새롭게 입점했습니다. 다양한 사용 환경과 취향에 맞는 필기구를 합리적인 가격으로 만나보세요.","java"],
+    ["시로카라","시로카라 – 시로카라 클래식 백팩","# 툭 털어지는 실루엣이 매력적인 가방, 시로카라를 만나보세요!","한 번 워싱한 나일론 소재로 사용할수록 내 몸에 맞게 자연스럽게 모양이 잡히는 것이 특징입니다. 넉넉한 수납공간과 텀블러 포켓까지 갖춰 실용성도 놓치지 않았습니다.","sirokara"]
+  ];
+  const trends=trendDefs.filter(([name])=>has(name)).map(([name,title,highlight,body,key])=>({
+    key:name,title,highlight,body,image:cropCanvasData(CROP[key]),crop:CROP[key],url:urlForRegion(REGION[key])
+  }));
+
+  DATA={issues,brands,trends};
+  return DATA;
+}
+function cropStyle(crop){
+  // crop = x,y,w,h percentages on the first PDF page snapshot.
+  const [x,y,w,h]=(crop||"0,0,100,100").split(",").map(Number);
+  const sx=100/w, sy=100/h;
+  return `width:${sx*100}%;height:${sy*100}%;max-width:none;object-fit:fill;transform:translate(${-x*sx}%,${-y*sy}%);transform-origin:top left`;
+}
+
+function media(item,cls="media-box"){
+  const fit=item.fit || "cover";
+  return `<div class="${cls}"><img src="${item.hostedImage||item.image||pageImage}" alt="" style="object-fit:${fit};object-position:${item.position||"center"};background:#fff"></div>`;
+}
+
+function renderPreview(){
+  $("#emptyPreview").classList.add("hidden");
+  $("#newsletterPreview").classList.remove("hidden");
+  const title=$("#reportTitle").value||"Weekly New Brand News";
+  const date=$("#issueDate").value||"";
+  const no=$("#issueNo").value||"";
+  const intro=$("#introText").value||"";
+
+  $("#newsletterPreview").innerHTML=`
+  <div class="news">
+    <header class="news-top">
+      <div class="news-brand"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIwAAAAjCAYAAABGiuIFAAAKQ0lEQVR4AexbzW4byRH+qmctBEF2Id8WiOVQiKTskUqw53BeIJFzt0Qi52DpJ5B8zUXaQ84jag852n4CSsghR9lAgLVlAxrJAXIKrAVyMGyTnfpm+DM9fxzKolf2sjGl7q6uqu6u+aZ/RYPLhu7iIrq32zi8HSgdK71SsgNiWnlLD9BdaqL7Ze2y1cz1rpcHpgdM91YDh0tdyBevINjV7jSV6kqLSsOHaeXJBkQCyMJppEPwDCXm8UfpgeqA4SgRAcV0AWlg6qA6BM/h7dP5iDO1866NQjXAcOqRhWNcCihIh1o04hzd2k4XzPPX3wOTAXN0exvx1MNp5up6ZM0OjpY4pV2dzbmlmXvAlNbAF2qxg1kFK21wTTQr+3O7V+6BYsBwZOELrVKlxRksHil1BvRI1UKlCo/UKgjNRa6JB/IBw69+8shyoeD4Ftb48M9rShtKzQFtoHG+rGXrKtNBebgoL45L53+vhwfyASMmKG2elaMIDP55G354WCjrh48jAFmzDMhDZEMI/2UePyv5qXFWvtvG6kEwpoDHE9e+l1nAxGclxdOEtR34Zw34YVi5d5RtnN2BtS1YeQILTmEcndYr2/jUBAUNCJojgvd7fAQhCxiR7eJ26yjhv2wWl08o8V/uwz+rI57CODpdTNCYF8/aA7WghiRNqM8FTHdpQ+WLRpcQVu5p+fz5VDzwVVDDgnfq0FdBo6x7LmAAAga5wdr78MMwt2zO/Ml4wAWMSNE8ysXp/k/GK/OOFnpgDBjeFQFF09EhJgUObyudbXz9twB//gtvsKsTF9q8/S6qoxYs4jcHbd1RdLF28ErJYq1zqvkAK8F4CKUc27B6MJZb7RxHcpyni+yn+bS52tnTeh6objeitc5ONNevBnXNBwnaddSdnc9BELWP7Yra39nDalB9DfjrzlainmCUZvuSldI++712kGivpllnUb/Zzr7ntp02e15y95YpHwMGPysCC3R3w4M4mssngqXvHcPIDn74vIl/fN1E8Cc6phrxUlK+OEYeaGh7wRzDYld3FATHYtwIqWm+CePxhe7qi6iDcmwDdyBALCdSj+Q4V9OpKAkxGLqRTZFvVHJDdRsRQbZBG/DYjqbyhrShcuNHMOQPYrOreq8QtV/Uplc0isMJbIsne4l6Bvas4EUr/oAJlNX92D77zSUF+05imnWyzasHu45tZthOyjCdJOqyLCa3byqXAEyvpvmCx5bvZnqfBaoYvyBNRM8/fws8W46SFf9o/b9oO7IEC4EI0TKnxM0I2hCPl6PlcnQqvyzkBH7NtCFooCxMKk/rErBp3qQ8+y1eV8VcnwIPcbLVBANl+IGIaTNbSvTPaudYR8i0vVK1vEKTx8zyPitf7Bq7nNVRzn+nbZ+4L6tv8pymht/j4ZeTnhZWggY8uR5rNAIhr9/WPsabXmvU80hGyj+QkbAmCNwb3ram3uupCBiUv/m+nCIv/Px1HrcaL3qpGYfoSGfvw0AdZzslhmI5gR4D5MiJcR1nTJCxJTgC9VkXY6D8o0Gl8ETb/qRQcgSWTL9DvO37CFvaL9XmKXF21NUyO/CN3AEs/aM8lR8+gna0poIGAft3pKn08wSjMpspTwDGK3FIr5626uTl3bdOnplb/wHq3zN1ORLjjja08qa3rkPyDp5u7mvc1LVVtl6+2KHcs829fDl9IVwj0GYuMHv38WyzobQX1RXZ2dRR1PIlUGtaCmHEx8lmPbKZpy1YRM88QBYIoY4sY7BAg+nH05ImoycefZZxsjXwzd146jK9dS1336uYeF3C/knPtaPCML22trER0XD6I39AZhAzcg2TMyJbDpiT1kP01SFiH0Xo/N2/jtDeP0J05yTZeGS3JGHNr5xSi32ELbeNb/s7ANyvyGob8uXgBq8e5z/biuPBX9Zz0qLdASMRRQ60jxOcKsn4hT+9Gy9UizU2wGnDLY91k/1Z+U4/JAV8Uu5t/w6Go0+S/7QVwuJ+kgWRPzr5KTNjwPhhqLqu85URPWJcp0bM1J8X6pBnWxsRMv/+1wb+8H0D0Z3TWTZOqY6zMq4/vS4SezaWG6ToJMEPg1wcCcY2MAiUGyQzkdi6w/N65aOISHm5Y0wzFodIvnBUDlmwUNVLtZc87oTWDqweA2RJEFAkQTVwd4UEZ4rkGDBU4v+0MM7SInhWkuVPz+n+sl6iNO3XW2KqctGiI/ka/HBQGHoybRsz64BC28mCfq+FPKBZ67Y3qVM9fWkbLmBgincKvJTMOyep3siBpGkPEjlRf9KwnaPzgVnm3aWdPVVLxeziPUaCqeqaQtg4sn7IF5Yd0mOhGuTz7AFQXFbtL0+TRbaKhf837ddbbKpqicCd6hbQRGkwG6XFV1XI9cwN082AxkiYU8WjeFdkdbqsQHkjV47RPJbJMC3ydh4DMWle+h+3I7AsdFEc9uFfXBQXz6jEWndUtd43+pJqubXxcA9lgM/VqsbkTie9gM8Dzevew4xBi1PdITULyfb3nLKMgQSjD11UozBkAQOzp9J5KFa2Plba8Y/Svsx3qopknjFYinVsX7+OjObsGabvAobb2xvesV41NEfA4X0MrxVmergnj2F7vnbY/Wgi0HjjkZ0LeCucCVR08Aja8T1TUEcyrAQN5XfBE2y2P1nGNHdRaZDCG94lNUdnNpQdkBnE48gPL2BNa8zIS0kj+m3R4VJQ+qO0bq0G/v4o+k0TaigOOrr8+7C4eIYlkdNsauuJRXVyoHdAp9HOg7sQIzuYdXje0im518pUI2jqiw8wDN47yqSAhaa2+Thq79pB3G7eswkaYGD780ADm51RWB93V57J9NnQVob88BAWrhMzQmSINnLhFIe3lZYeaBwk6BTSP1XwsdJFShcQAVqhrgLtq2DzwCs+Gb0Ka+9ng2dadgJoCHLbu1dSUf7HafR9cbRMKr7pl88oSVlN5wNGC+Cf7yhosuhjWZa0gcLFYFOLhqQ8zWWeFIP/5+uHYYr74bPxodyPC9xhr5+39nV6ag2zo1jQxHCUiGXWAVTzneBocGLsynOKMz1OhS4f+aEYMJTnrwIsZufECCwvs4s41v1jEEca01tGPNq4DhTobsqqL3p6T/MBGkdAgPWl6kpOLZzCTvTKwqIFQd55zwV4+s5rCV4FFO2OOGK5di5StY6y5YChWDzS3GPyCkmnIXsH/KfwIqPPNms42ZQxbXFqy0pXlXNsqd3nm/tZY8qJnLelO47NZf0ib+rdShxH9WztgFOGa0sBpnrDxy0TFNXz/K4/7tsm5VpDE6OYAE7bY/7FlgJ3JIWoDgKCZQQ86U3vptq/CZ6+T76WiI2xrbEd6orqxuufuDT6OxkwFPPP93QtsqxTlO73yXgPsqJ3S2ZdwXJ9Rpai7nC4JoAYF8lcNz7bS5pRm6sBhk7xwxD++YYCxwdfOnnTEHWiX0meNUBb0+jOZa+NB6oDZthkPzwELxX5a0auQXj/xB+nuft5nXLAH6s9gsU9BdlypEPdoZ15/FF64P8AAAD//3Nxr2gAAAAGSURBVAMA3I0N47+gKBMAAAAASUVORK5CYII=" alt="Gmarket"><span class="news-title">${esc(title)}</span></div>
+      <div class="news-issue">${esc(date)} · ${esc(no)}</div>
+    </header>
+    <div class="news-intro">${esc(intro)}</div>
+
+    <section class="block">
+      <div class="block-head"><h2>TEAM - BD ISSUE</h2><p>BD팀의 신규 입점 브랜드 중 이슈 상품을 소개합니다.</p></div>
+      <div class="issue-grid">
+        ${DATA.issues.map(x=>x.url
+          ? `<a class="content-card issue-card card-link" href="${esc(x.url)}" target="_blank" rel="noopener"><span class="kicker">${esc(x.kicker)}</span>${media(x)}<h3>${x.title}</h3><p>${richText(x.body)}</p><span class="cta">보러가기 →</span></a>`
+          : `<article class="content-card issue-card"><span class="kicker">${esc(x.kicker)}</span>${media(x)}<h3>${x.title}</h3><p>${richText(x.body)}</p></article>`).join("")}
+      </div>
+    </section>
+
+    <section class="block">
+      <div class="block-head"><h2>이달의 신규 브랜드 소개</h2><p>새롭게 입점한 브랜드를 한눈에 만나보세요.</p></div>
+      <div class="brand-grid">
+        ${DATA.brands.map(x=>`<article class="content-card brand-card"><span class="badge ${x.url?"":"soon"}">${x.url?"NEW":"COMING SOON"}</span>${media(x)}<h3>${esc(x.name)}</h3><p>${esc(x.copy)}</p>${x.url?`<a class="cta" href="${esc(x.url)}" target="_blank" rel="noopener">바로가기 →</a>`:'<span class="cta disabled">COMING SOON</span>'}</article>`).join("")}
+      </div>
+    </section>
+
+    <section class="block">
+      <div class="block-head"><h2>트렌드 키워드를 통한 신규 셀러 입점</h2><p>트렌드 키워드를 담은 신규 셀러! G마켓에서 만나보세요.</p></div>
+      <div class="trend-list">
+        ${DATA.trends.map(x=>`<article class="trend-row">${media(x)}<div class="trend-copy"><h3>${esc(x.title)}</h3><div class="hl">${esc(x.highlight)}</div><p>${richText(x.body)}</p>${x.url?`<a class="cta" href="${esc(x.url)}" target="_blank" rel="noopener">바로가기 →</a>`:'<span class="cta disabled">COMING SOON</span>'}</div></article>`).join("")}
+      </div>
+    </section>
+  </div>`;
+}
+
+function renderEditors(){
+  const host=$("#contentEditors");host.innerHTML="";
+  const groups=[["이슈","issue",DATA.issues],["신규 브랜드","brand",DATA.brands],["트렌드","trend",DATA.trends]];
+  groups.forEach(([label,type,list])=>{
+    list.forEach((x,idx)=>{
+      const el=document.createElement("div");el.className="edit-card";
+      const title=x.name||x.title||x.key;
+      el.innerHTML=`
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+          <div><span class="pill ${type}">${label}</span> <b style="font-size:13px">${esc(title)}</b></div>
+          <button class="danger" data-del="${type}" data-idx="${idx}" style="padding:6px 8px">삭제</button>
+        </div>
+        <div class="meta">
+          <div><img class="mini-thumb" src="${x.hostedImage||x.image||pageImage}" style="object-fit:cover;background:#fff"></div>
+          <div>
+            <input data-f="title" data-type="${type}" data-idx="${idx}" value="${esc(x.name||x.title||"")}" placeholder="제목/브랜드명">
+            <input data-f="url" data-type="${type}" data-idx="${idx}" value="${esc(x.url||"")}" placeholder="CTA URL" style="margin-top:6px">
+            <input data-f="crop" data-type="${type}" data-idx="${idx}" value="${esc(x.crop||"")}" placeholder="고급: 이미지 영역 x,y,w,h (%)" style="margin-top:6px">
+          </div>
+        </div>
+        <textarea data-f="body" data-type="${type}" data-idx="${idx}" placeholder="본문/한 줄 카피" style="margin-top:8px">${esc(type==="brand"?(x.copy||""):(x.body||""))}</textarea>
+      `;
+      host.appendChild(el);
+    });
+  });
+  host.querySelectorAll("input,textarea").forEach(inp=>inp.addEventListener("input",handleEdit));
+  host.querySelectorAll("[data-del]").forEach(btn=>btn.addEventListener("click",()=>{
+    const arr=btn.dataset.del==="issue"?DATA.issues:btn.dataset.del==="brand"?DATA.brands:DATA.trends;
+    arr.splice(+btn.dataset.idx,1);renderEditors();renderPreview();
+  }));
+}
+
+function handleEdit(e){
+  const type=e.target.dataset.type, idx=+e.target.dataset.idx, f=e.target.dataset.f;
+  const arr=type==="issue"?DATA.issues:type==="brand"?DATA.brands:DATA.trends;
+  const x=arr[idx];
+  if(f==="title"){ if(type==="brand")x.name=e.target.value; else x.title=e.target.value; }
+  else if(f==="body"){ if(type==="brand")x.copy=e.target.value; else x.body=e.target.value; }
+  else if(f==="crop"){
+    x.crop=e.target.value;
+    x.image=cropCanvasData(x.crop);
+  } else x[f]=e.target.value;
+  renderPreview();
+}
+
+function mapStatus(){
+  let missing=0,total=0;
+  [...DATA.issues,...DATA.brands,...DATA.trends].forEach(x=>{total++;if(!x.url)missing++;});
+  $("#buildStatus").innerHTML=`자동 구성 완료 · 총 ${total}개 콘텐츠<br><span class="map-ok">이미지: PDF 이미지 박스 기준 분리</span> · <span class="${missing?'map-warn':'map-ok'}">링크 없는 콘텐츠 ${missing}개</span><br><span class="helper">이번 16호는 실제 이미지 박스 좌표로 보정했습니다. 다음 호에서 어긋나는 항목만 이미지 영역을 다시 지정하면 됩니다.</span>`;
+}
+
+function buildHtml(){
+  const clone=$("#newsletterPreview").cloneNode(true);
+  clone.classList.remove("hidden");
+  const logo=clean($("#logoUrl").value);
+  const logoImg=clone.querySelector(".news-brand img");
+  if(logoImg)logoImg.src=logo;
+  const css=[...document.styleSheets].map(s=>{try{return [...s.cssRules].map(r=>r.cssText).join("\n")}catch(e){return ""}}).join("\n");
+  return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${css}
+.card-link,.text-link,.trend-media-link,.issue-media-link{
+  color:inherit;text-decoration:none;
+}
+.card-link{display:block}
+.card-link h3,.text-link h3{color:inherit}
+.card-link:hover h3,.text-link:hover h3{text-decoration:underline;text-underline-offset:3px}
+.trend-media-link,.issue-media-link{display:block}
+
+</style></head><body>${clone.outerHTML}</body></html>`;
+}
+
+function allContentItems(){
+  return [...DATA.issues,...DATA.brands,...DATA.trends];
+}
+
+function safeFileName(v){
+  return String(v||"item").trim().replace(/[\\/:*?"<>|]+/g,"-").replace(/\s+/g,"-").slice(0,55);
+}
+
+function imageFileName(item,index){
+  const issueCount=DATA.issues.length,brandCount=DATA.brands.length;
+  const type=index<issueCount?"issue":index<issueCount+brandCount?"brand":"trend";
+  const label=item.name||item.title||item.key||type;
+  return `${String(index+1).padStart(2,"0")}-${type}-${safeFileName(label)}.png`;
+}
+
+async function exportImageZip(){
+  const items=allContentItems();
+  if(!items.length){alert("먼저 PDF를 분석해 콘텐츠를 구성해 주세요.");return}
+  if(!window.JSZip){alert("ZIP 라이브러리를 불러오지 못했습니다. 인터넷 연결을 확인해 주세요.");return}
+  const zip=new JSZip();
+  for(let i=0;i<items.length;i++){
+    const src=items[i].image;
+    if(!src||!src.startsWith("data:image/"))throw new Error(`${i+1}번 이미지 원본을 찾지 못했습니다.`);
+    zip.file(imageFileName(items[i],i),await (await fetch(src)).blob());
+  }
+  const blob=await zip.generateAsync({type:"blob"});
+  const url=URL.createObjectURL(blob),a=document.createElement("a");
+  const date=$("#issueDate").value||"bd-newsletter";
+  a.href=url;a.download=`bd-newsletter-images-${date}.zip`;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1500);
+  $("#publishStatus").textContent=`ZIP 저장 완료 · 이미지 ${items.length}장`;
+}
+
+function extractPartnerImageUrls(raw){
+  const src=String(raw||"").replace(/\\</g,"<").replace(/\\>/g,">").replace(/&quot;/g,'"').replace(/&#x27;|&#39;/g,"'");
+  const urls=[];
+  const add=value=>{
+    const url=String(value||"").trim().replace(/[),.;]+$/g,"");
+    if(/^https?:\/\/cdn\.imweb\.me\/upload\//i.test(url)&&!urls.includes(url))urls.push(url);
+  };
+  (src.match(/https?:\/\/cdn\.imweb\.me\/upload\/[A-Za-z0-9_./%~-]+/gi)||[]).forEach(add);
+  return urls;
+}
+
+function applyPartnerImages(showAlert=false){
+  const items=allContentItems(),urls=extractPartnerImageUrls($("#partnerSource").value);
+  if(urls.length<items.length){
+    $("#publishStatus").textContent=`이미지 ${urls.length}개 감지 / 필요한 이미지 ${items.length}개 · ZIP 이미지를 전부 업로드해 주세요.`;
+    if(showAlert)alert("업로드 이미지 수가 부족합니다. ZIP 파일을 전부 업로드한 뒤 코드 보기 HTML을 다시 붙여넣어 주세요.");
+    return false;
+  }
+  items.forEach((item,i)=>item.hostedImage=urls[i]);
+  renderEditors();renderPreview();
+  $("#publishStatus").textContent=`이미지 주소 ${items.length}개 자동 매칭 완료 · 게시용 HTML을 만들 수 있습니다.`;
+  return true;
+}
+
+$("#pdfDrop").onclick=()=>$("#pdfFile").click();
+$("#pdfFile").addEventListener("change",e=>{
+  selectedPdf=e.target.files?.[0]||null;
+  $("#pdfStatus").textContent=selectedPdf?`선택됨: ${selectedPdf.name}`:"PDF를 넣어주세요.";
+});
+["dragenter","dragover"].forEach(ev=>$("#pdfDrop").addEventListener(ev,e=>{e.preventDefault();$("#pdfDrop").classList.add("drag")}));
+["dragleave","drop"].forEach(ev=>$("#pdfDrop").addEventListener(ev,e=>{e.preventDefault();$("#pdfDrop").classList.remove("drag")}));
+$("#pdfDrop").addEventListener("drop",e=>{
+  const f=[...e.dataTransfer.files].find(f=>f.type==="application/pdf"||f.name.toLowerCase().endsWith(".pdf"));
+  if(f){selectedPdf=f;$("#pdfStatus").textContent=`선택됨: ${f.name}`;}
+});
+
+$("#parsePdfBtn").onclick=async()=>{
+  if(!selectedPdf){alert("PDF를 먼저 넣어주세요.");return}
+  $("#pdfStatus").textContent="PDF 분석 중...";
+  try{
+    const res=await loadPdf(selectedPdf);
+    autoParseText(res.text);
+    $("#pdfStatus").textContent=`분석 완료 · 1페이지 텍스트 ${res.lines.length}줄 · PDF 링크 ${annotations.length}개 감지`;
+    renderEditors();renderPreview();mapStatus();
+  }catch(err){
+    console.error(err);$("#pdfStatus").textContent="PDF 분석 실패: "+err.message;
+  }
+};
+$("#autoBuildBtn").onclick=()=>{ if(!textItems.length){alert("먼저 PDF 자동 분석을 눌러주세요.");return} const text=linesFromItems(textItems).join("\n");autoParseText(text);renderEditors();renderPreview();mapStatus(); };
+$("#mapBtn").onclick=()=>mapStatus();
+$("#resetBtn").onclick=()=>{selectedPdf=null;pdfDoc=null;pageImage="";textItems=[];annotations=[];DATA={issues:[],brands:[],trends:[]};$("#pdfFile").value="";$("#pdfStatus").textContent="PDF를 넣어주세요.";$("#rawPreview").classList.add("hidden");$("#contentEditors").innerHTML="";$("#newsletterPreview").classList.add("hidden");$("#emptyPreview").classList.remove("hidden");$("#buildStatus").textContent="PDF 분석 후 섹션을 구성합니다.";today();$("#issueNo").value="";};
+["reportTitle","issueDate","issueNo","introText"].forEach(id=>$("#"+id).addEventListener("input",()=>{if(DATA.issues.length||DATA.brands.length||DATA.trends.length)renderPreview()}));
+
+$("#addIssue").onclick=()=>{DATA.issues.push({key:"issue-"+Date.now(),type:"issue",kicker:"NEW ISSUE",title:"새 이슈 제목",body:"내용을 입력하세요.",image:pageImage,crop:"0,0,100,100",url:""});renderEditors();renderPreview()};
+$("#addBrand").onclick=()=>{DATA.brands.push({key:"brand-"+Date.now(),name:"새 브랜드",copy:"한 줄 카피",image:pageImage,crop:"0,0,100,100",url:""});renderEditors();renderPreview()};
+$("#addTrend").onclick=()=>{DATA.trends.push({key:"trend-"+Date.now(),title:"새 트렌드",highlight:"# 키워드",body:"내용을 입력하세요.",image:pageImage,crop:"0,0,100,100",url:""});renderEditors();renderPreview()};
+
+$("#saveWork").onclick=()=>{localStorage.setItem("bdNewsletterStudio",JSON.stringify({DATA,meta:{date:$("#issueDate").value,no:$("#issueNo").value,title:$("#reportTitle").value,intro:$("#introText").value}}));localStorage.setItem("bdNewsletterLogoUrl",$("#logoUrl").value);$("#buildStatus").textContent="현재 작업을 이 브라우저에 저장했습니다."};
+$("#loadWork").onclick=()=>{const raw=localStorage.getItem("bdNewsletterStudio");if(!raw)return alert("저장된 작업이 없습니다.");const s=JSON.parse(raw);DATA=s.DATA;$("#issueDate").value=s.meta.date;$("#issueNo").value=s.meta.no;$("#reportTitle").value=s.meta.title;$("#introText").value=s.meta.intro;$("#logoUrl").value=localStorage.getItem("bdNewsletterLogoUrl")||"";renderEditors();renderPreview();mapStatus()};
+$("#exportImages").onclick=async()=>{const btn=$("#exportImages"),old=btn.textContent;btn.disabled=true;btn.textContent="이미지 ZIP 만드는 중...";try{await exportImageZip()}catch(err){console.error(err);$("#publishStatus").textContent="ZIP 생성 실패: "+err.message}finally{btn.disabled=false;btn.textContent=old}};
+$("#partnerSource").addEventListener("input",()=>{const count=extractPartnerImageUrls($("#partnerSource").value).length;$("#publishStatus").textContent=`이미지 주소 ${count}개 감지`});
+$("#extractImages").onclick=()=>applyPartnerImages(true);
+$("#logoUrl").value=localStorage.getItem("bdNewsletterLogoUrl")||"";
+$("#logoUrl").addEventListener("input",()=>localStorage.setItem("bdNewsletterLogoUrl",$("#logoUrl").value));
+$("#makeHtml").onclick=()=>{
+  if($("#newsletterPreview").classList.contains("hidden"))return alert("먼저 PDF를 분석해 미리보기를 만들어 주세요.");
+  if(!applyPartnerImages(true))return;
+  if(!/^https?:\/\//i.test(clean($("#logoUrl").value))){$("#publishStatus").textContent="상단 G마켓 로고 이미지 주소를 입력해 주세요.";return alert("상단 G마켓 로고 이미지 주소가 필요합니다.")}
+  const html=buildHtml(),remaining=(html.match(/data:image\//g)||[]).length;
+  if(remaining){$("#htmlResult").value="";$("#publishStatus").textContent=`base64 이미지 ${remaining}개가 남아 있어 HTML 생성을 중단했습니다.`;return}
+  $("#htmlResult").value=html;$("#publishStatus").textContent=`게시용 HTML 생성 완료 · CDN 이미지 ${allContentItems().length+1}개 · base64 0개`;
+};
+$("#copyHtml").onclick=async()=>{const value=$("#htmlResult").value;if(!value)return alert("먼저 ④ 게시용 HTML 만들기를 눌러주세요.");try{await navigator.clipboard.writeText(value)}catch(e){$("#htmlResult").focus();$("#htmlResult").select();document.execCommand("copy")}$("#publishStatus").textContent="⑤ 게시용 HTML 복사 완료"};
+</script>
+</body>
+</html>
