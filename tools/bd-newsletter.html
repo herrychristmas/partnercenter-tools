@@ -98,7 +98,7 @@ textarea:focus,input:focus,select:focus{border-color:#8ba5c4;box-shadow:0 0 0 3p
 .brand-grid.cols-5 .brand-card h3{font-size:17px;margin:12px 11px 4px}
 .brand-grid.cols-5 .brand-card p{font-size:12px;line-height:1.42;margin:0 11px 10px;min-height:35px}
 .brand-grid.cols-5 .brand-card .cta{font-size:10px;margin-left:11px;padding:6px 9px}
-.brand-card{position:relative;padding-bottom:18px;display:flex;flex-direction:column;transition:transform .22s ease,box-shadow .22s ease,border-color .22s ease}
+.brand-card{position:relative;padding-bottom:18px;transition:transform .22s ease,box-shadow .22s ease,border-color .22s ease}
 .brand-card:hover{transform:translateY(-6px);box-shadow:7px 9px 0 #e7ebee;border-color:#111}
 .brand-card:hover .media-box img{transform:scale(1.045)}
 .brand-card .media-box{height:176px;margin:0;border:0;border-bottom:1px solid #e1e5e8;border-radius:0;background:#f8f8f7}
@@ -106,7 +106,6 @@ textarea:focus,input:focus,select:focus{border-color:#8ba5c4;box-shadow:0 0 0 3p
 .badge.soon{background:var(--lime)}
 .brand-card h3{font:950 21px/1.25 var(--display-font);margin:15px 14px 5px}
 .brand-card p{font-size:14px;line-height:1.45;color:#464c52;margin:0 14px 12px;min-height:40px;font-weight:650}
-.brand-card .cta{margin-top:auto;align-self:flex-start}
 .cta{display:inline-block;margin-left:14px;border:1.3px solid #333;border-radius:999px;padding:7px 11px;font-size:12px;font-weight:900;text-decoration:none;color:#222;background:#fff;transition:.18s ease}
 .cta:not(.disabled):hover{background:#222;color:#fff;transform:translateY(-1px)}
 .cta.disabled{opacity:.45;pointer-events:none}
@@ -123,7 +122,6 @@ textarea:focus,input:focus,select:focus{border-color:#8ba5c4;box-shadow:0 0 0 3p
 .rich-yellow{background:linear-gradient(transparent 40%,#fff06a 40%);font-weight:900}
 .news-title,.news-issue,.block-head h2,.kicker,.badge,.brand-card h3,.trend-copy h3,.trend-copy .hl,.cta,
 .rich-green,.rich-orange,.rich-yellow{font-family:var(--display-font)}
-.pdf-bold{font-family:var(--display-font);font-weight:950}
 .preview-empty{min-height:650px;display:flex;align-items:center;justify-content:center;text-align:center;color:#8b929b;font-weight:800;padding:40px}
 .preview-empty b{display:block;color:#4d5661;font-size:22px;margin-bottom:8px}
 .raw-preview{margin-top:12px;border:1px solid #dfe4e8;border-radius:12px;overflow:hidden;background:#fff}
@@ -158,7 +156,7 @@ textarea:focus,input:focus,select:focus{border-color:#8ba5c4;box-shadow:0 0 0 3p
 <body>
 <div class="app">
   <aside class="panel">
-    <h1>BD Newsletter Studio <small class="version-badge">V3.2</small></h1>
+    <h1>BD Newsletter Studio <small class="version-badge">V3.0</small></h1>
     <div class="sub">PDF 한 번으로 뉴스레터 구조를 읽고, 내용·이미지·링크를 점검한 뒤 파트너센터용 HTML까지 만드는 작업용 툴입니다.</div>
 
     <div class="section">
@@ -249,7 +247,7 @@ import * as pdfjsLib from "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.8.69/
 pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.8.69/pdf.worker.min.mjs";
 
 const $=s=>document.querySelector(s);
-let selectedPdf=null, pdfDoc=null, pageImage="", textItems=[], textStyles={}, PDF_STYLE_RUNS=[], annotations=[], SECTION_MODE=false, SECTIONS=[];
+let selectedPdf=null, pdfDoc=null, pageImage="", textItems=[], annotations=[], SECTION_MODE=false, SECTIONS=[];
 let DATA={issues:[],brands:[],trends:[]};
 
 const sampleBrandNames=["일리커피","삼육","로즈몽","요기보","릴리이브","미정당","리복키즈","알톤","이너시아"];
@@ -264,63 +262,22 @@ today();
 function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
 function clean(s){return String(s||"").replace(/\s+/g," ").trim()}
 function squash(s){return String(s||"").replace(/\s+/g,"").trim()}
-function styledText(value,allowBr=false){
-  const marks=[
-    {text:"뷰티 브랜드 성장 전략 세미나",cls:"rich-green"},{text:"오는 9월 7일 신세계 남산 오디토리움",cls:"rich-orange"},
-    {text:"마스크 누적 1억 장 이상 판매, 태국 왓슨스 시트마스크 7년 연속 1위",cls:"rich-green"},
-    {text:"국내외에서 탄탄한 인지도",cls:"rich-yellow"},{text:"합리적인 가격",cls:"rich-yellow"},
-    {text:"새 학기 준비",cls:"rich-green"},{text:"다양한 사용 환경과 취향",cls:"rich-green"},{text:"넉넉한 수납공간과 텀블러 포켓",cls:"rich-green"},
-    ...PDF_STYLE_RUNS
-  ].filter(r=>clean(r.text).length>1).sort((a,b)=>b.text.length-a.text.length);
-  let s=esc(value),tokens=[];
-  marks.forEach(({text,cls,style})=>{
-    const needle=esc(clean(text));if(!needle||!s.includes(needle))return;
-    const token=`___PDFSTYLE_${tokens.length}___`;
-    tokens.push(style?`<span style="${style}">${needle}</span>`:`<span class="${cls}">${needle}</span>`);s=s.split(needle).join(token);
-  });
-  tokens.forEach((html,i)=>{s=s.split(`___PDFSTYLE_${i}___`).join(html)});
-  if(allowBr)s=s.replace(/&lt;br\s*\/?&gt;/gi,"<br>");
-  return s;
-}
 function richText(value){
-  let s=styledText(value);
+  let s=esc(value);
+  const marks=[
+    ["뷰티 브랜드 성장 전략 세미나","rich-green"],
+    ["오는 9월 7일 신세계 남산 오디토리움","rich-orange"],
+    ["마스크 누적 1억 장 이상 판매, 태국 왓슨스 시트마스크 7년 연속 1위","rich-green"],
+    ["국내외에서 탄탄한 인지도","rich-yellow"],
+    ["합리적인 가격","rich-yellow"],
+    ["새 학기 준비","rich-green"],
+    ["다양한 사용 환경과 취향","rich-green"],
+    ["넉넉한 수납공간과 텀블러 포켓","rich-green"]
+  ];
+  marks.forEach(([text,cls])=>{s=s.split(text).join(`<span class="${cls}">${text}</span>`)});
   s=s.replace("우즈스튜디오와 함께합니다.","우즈스튜디오와 함께합니다. 🔥");
   s=s.replace("탄탄한 인지도를 쌓아온 브랜드입니다.","탄탄한 인지도를 쌓아온 브랜드입니다. 😻");
   return s;
-}
-
-function detectPdfStyleRuns(){
-  const canvas=$("#pdfCanvas"),ctx=canvas?.getContext("2d");PDF_STYLE_RUNS=[];
-  if(!canvas||!ctx||!textItems.length)return;
-  const scale=4,runs=[];
-  textItems.forEach(it=>{
-    const text=clean(it.str);if(text.length<2)return;
-    const x=Math.max(0,Math.floor(it.transform[4]*scale));
-    const h=Math.max(8,Math.abs(it.height||it.transform[3]||10)*scale);
-    const y=Math.max(0,Math.floor(canvas.height-it.transform[5]*scale-h*1.15));
-    const w=Math.max(4,Math.min(canvas.width-x,Math.ceil((it.width||text.length*6)*scale)));
-    const hh=Math.max(4,Math.min(canvas.height-y,Math.ceil(h*1.35)));
-    let data;try{data=ctx.getImageData(x,y,w,hh).data}catch(e){return}
-    let yellow=0,sampled=0;const hueBins=Array.from({length:12},()=>({n:0,r:0,g:0,b:0}));
-    for(let p=0;p<data.length;p+=16){
-      const r=data[p],g=data[p+1],b=data[p+2],a=data[p+3];if(a<100)continue;sampled++;
-      if(r>225&&g>195&&b<155)yellow++;
-      const max=Math.max(r,g,b),min=Math.min(r,g,b),delta=max-min;
-      if(delta<55||max<90||max>245&&min>210)continue;
-      let hue=0;if(delta){if(max===r)hue=60*(((g-b)/delta)%6);else if(max===g)hue=60*((b-r)/delta+2);else hue=60*((r-g)/delta+4)}if(hue<0)hue+=360;
-      const bin=hueBins[Math.floor(hue/30)%12];bin.n++;bin.r+=r;bin.g+=g;bin.b+=b;
-    }
-    const family=String(textStyles[it.fontName]?.fontFamily||"");
-    const isBold=/bold|black|heavy|semibold|extrabold/i.test(family);
-    const dominant=hueBins.sort((a,b)=>b.n-a.n)[0];let cls="",style="";
-    if(sampled&&yellow/sampled>.12)cls="rich-yellow";
-    else if(dominant.n>=10&&dominant.n/sampled>.018){
-      const r=Math.round(dominant.r/dominant.n),g=Math.round(dominant.g/dominant.n),b=Math.round(dominant.b/dominant.n);
-      style=`color:rgb(${r},${g},${b});font-family:'Gmarket Sans',Pretendard,sans-serif;font-weight:900`;
-    }else if(isBold)cls="pdf-bold";
-    if(cls||style)runs.push({text,cls,style});
-  });
-  const seen=new Set();PDF_STYLE_RUNS=runs.filter(r=>{const k=(r.cls||r.style)+"|"+r.text;if(seen.has(k))return false;seen.add(k);return true});
 }
 function cropCanvasData(crop){
   const src=$("#pdfCanvas");
@@ -397,7 +354,7 @@ async function loadPdf(file){
   await page.render({canvasContext:ctx,viewport}).promise;
   pageImage=canvas.toDataURL("image/png");
   $("#rawPreview").classList.remove("hidden");
-  const tc=await page.getTextContent();textItems=tc.items;textStyles=tc.styles||{};detectPdfStyleRuns();
+  const tc=await page.getTextContent();textItems=tc.items;
   const ann=await page.getAnnotations();
   annotations=ann.filter(a=>a.url||a.unsafeUrl).map(a=>{
     const vr=viewport.convertToViewportRectangle(a.rect);
@@ -461,13 +418,11 @@ function presetData(no){
   };
   const p=presets[no];if(!p)return null;
   const issues=p.issues.map(([kicker,title,textRegion,imageRegion],i)=>{
-    const regionLines=textLinesInRegion(textRegion);
-    const pdfTitle=regionLines.find(x=>squash(x).includes(squash(title)))||title;
     const lines=textLinesInRegion(textRegion).filter(x=>{
       const n=squash(x);return !n.includes(squash(title))&&!n.includes("TEAM-BDISSUE")&&!n.includes("BD팀의신규입점브랜드중이슈상품을소개합니다");
     });
     const imageX=Number(String(imageRegion).split(",")[0]);
-    return {key:"preset-issue-"+i,type:"issue",kicker,title:pdfTitle,body:lines.join(" "),image:cropCanvasData(imageRegion),crop:imageRegion,url:urlForRect(textRegion),fit:"contain",imageSide:imageX<50?"left":"right"};
+    return {key:"preset-issue-"+i,type:"issue",kicker,title,body:lines.join(" "),image:cropCanvasData(imageRegion),crop:imageRegion,url:urlForRect(textRegion),fit:"contain",imageSide:imageX<50?"left":"right"};
   });
   const rowH=(p.brandEnd-p.brandStart)/5;
   const brands=p.brands.map((name,i)=>{
@@ -602,13 +557,13 @@ function brandColumnCount(count){
 function previewIssueCard(x){
   const linked=!!x.url,tag=linked?"a":"article";
   if(DATA.issues.length===1){
-    const copy=`<div class="issue-feature-copy"><h3>${styledText(x.title,true)}</h3><p>${richText(x.body)}</p>${linked?'<span class="cta">보러가기 →</span>':""}</div>`;
+    const copy=`<div class="issue-feature-copy"><h3>${x.title}</h3><p>${richText(x.body)}</p>${linked?'<span class="cta">보러가기 →</span>':""}</div>`;
     const visual=`<div class="issue-feature-media">${media(x)}</div>`;
     return `<${tag} class="content-card issue-card${linked?" card-link":""}"${linked?` href="${esc(x.url)}" target="_blank" rel="noopener"`:""}><span class="kicker">${esc(x.kicker)}</span><div class="issue-feature image-${x.imageSide||"right"}">${copy}${visual}</div></${tag}>`;
   }
   return linked
-    ? `<a class="content-card issue-card card-link" href="${esc(x.url)}" target="_blank" rel="noopener"><span class="kicker">${esc(x.kicker)}</span>${media(x)}<h3>${styledText(x.title,true)}</h3><p>${richText(x.body)}</p><span class="cta">보러가기 →</span></a>`
-    : `<article class="content-card issue-card"><span class="kicker">${esc(x.kicker)}</span>${media(x)}<h3>${styledText(x.title,true)}</h3><p>${richText(x.body)}</p></article>`;
+    ? `<a class="content-card issue-card card-link" href="${esc(x.url)}" target="_blank" rel="noopener"><span class="kicker">${esc(x.kicker)}</span>${media(x)}<h3>${x.title}</h3><p>${richText(x.body)}</p><span class="cta">보러가기 →</span></a>`
+    : `<article class="content-card issue-card"><span class="kicker">${esc(x.kicker)}</span>${media(x)}<h3>${x.title}</h3><p>${richText(x.body)}</p></article>`;
 }
 
 function renderPreview(){
@@ -642,14 +597,14 @@ function renderPreview(){
     <section class="block">
       <div class="block-head"><h2>이달의 신규 브랜드 소개</h2><p>새롭게 입점한 브랜드를 한눈에 만나보세요.</p></div>
       <div class="brand-grid cols-${brandCols}" style="grid-template-columns:repeat(${brandCols},minmax(0,1fr))">
-        ${DATA.brands.map(x=>`<article class="content-card brand-card"><span class="badge ${x.url?"":"soon"}">${x.url?"NEW":"COMING SOON"}</span>${media(x)}<h3>${styledText(x.name)}</h3><p>${styledText(x.copy)}</p>${x.url?`<a class="cta" href="${esc(x.url)}" target="_blank" rel="noopener">바로가기 →</a>`:'<span class="cta disabled">COMING SOON</span>'}</article>`).join("")}
+        ${DATA.brands.map(x=>`<article class="content-card brand-card"><span class="badge ${x.url?"":"soon"}">${x.url?"NEW":"COMING SOON"}</span>${media(x)}<h3>${esc(x.name)}</h3><p>${esc(x.copy)}</p>${x.url?`<a class="cta" href="${esc(x.url)}" target="_blank" rel="noopener">바로가기 →</a>`:'<span class="cta disabled">COMING SOON</span>'}</article>`).join("")}
       </div>
     </section>
 
     <section class="block">
       <div class="block-head"><h2>트렌드 키워드를 통한 신규 셀러 입점</h2><p>트렌드 키워드를 담은 신규 셀러! G마켓에서 만나보세요.</p></div>
       <div class="trend-list">
-        ${DATA.trends.map(x=>`<article class="trend-row">${media(x)}<div class="trend-copy"><h3>${styledText(x.title)}</h3><div class="hl">${styledText(x.highlight)}</div><p>${richText(x.body)}</p>${x.url?`<a class="cta" href="${esc(x.url)}" target="_blank" rel="noopener">바로가기 →</a>`:'<span class="cta disabled">COMING SOON</span>'}</div></article>`).join("")}
+        ${DATA.trends.map(x=>`<article class="trend-row">${media(x)}<div class="trend-copy"><h3>${esc(x.title)}</h3><div class="hl">${esc(x.highlight)}</div><p>${richText(x.body)}</p>${x.url?`<a class="cta" href="${esc(x.url)}" target="_blank" rel="noopener">바로가기 →</a>`:'<span class="cta disabled">COMING SOON</span>'}</div></article>`).join("")}
       </div>
     </section>
   </div>`;
@@ -720,19 +675,13 @@ function buildHtml(){
     return '<div style="width:100%;max-width:1000px;margin:0 auto;background:#fff">'+imgs+'</div><p><br></p>';
   }
   const logo=clean($("#logoUrl").value);
-  const font="'Gmarket Sans',GmarketSans,Pretendard,Apple SD Gothic Neo,Malgun Gothic,Arial,sans-serif";
+  const font="GmarketSans,Pretendard,Apple SD Gothic Neo,Malgun Gothic,Arial,sans-serif";
   const img=x=>esc(x.hostedImage||x.image||"");
-  const br=v=>styledText(v,true);
+  const br=v=>esc(v).replace(/&lt;br\s*\/?&gt;/gi,"<br>");
   const marked=v=>richText(v)
-    .replace(/class="rich-green"/g,`style="color:#19a463;font-family:${font};font-weight:800"`)
-    .replace(/class="rich-orange"/g,`style="color:#ff6b35;font-family:${font};font-weight:800"`)
-    .replace(/class="rich-yellow"/g,`style="background:#fff3a6;font-family:${font};font-weight:800"`)
-    .replace(/class="pdf-bold"/g,`style="font-family:${font};font-weight:900"`);
-  const markedShort=v=>styledText(v)
-    .replace(/class="rich-green"/g,`style="color:#19a463;font-family:${font};font-weight:800"`)
-    .replace(/class="rich-orange"/g,`style="color:#ff6b35;font-family:${font};font-weight:800"`)
-    .replace(/class="rich-yellow"/g,`style="background:#fff3a6;font-family:${font};font-weight:800"`)
-    .replace(/class="pdf-bold"/g,`style="font-family:${font};font-weight:900"`);
+    .replace(/class="rich-green"/g,'style="color:#19a463;font-weight:800"')
+    .replace(/class="rich-orange"/g,'style="color:#ff6b35;font-weight:800"')
+    .replace(/class="rich-yellow"/g,'style="background:#fff3a6;font-weight:800"');
   const dedupe=v=>{
     const s=clean(v),half=Math.floor(s.length/2);
     for(let d=-4;d<=4;d++){
@@ -743,9 +692,6 @@ function buildHtml(){
   const cta=url=>url
     ? `<a href="${esc(url)}" target="_blank" rel="noopener" style="display:inline-block;margin-top:14px;padding:8px 13px;border:1px solid #222;border-radius:999px;color:#111;text-decoration:none;font-size:13px;font-weight:800">바로가기 →</a>`
     : `<span style="display:inline-block;margin-top:14px;padding:8px 13px;border:1px solid #bbb;border-radius:999px;color:#999;font-size:13px;font-weight:800">COMING SOON</span>`;
-  const brandCta=url=>url
-    ? `<a href="${esc(url)}" target="_blank" rel="noopener" style="position:absolute;left:${compactBrands?"10":"14"}px;bottom:14px;display:inline-block;padding:7px 11px;border:1px solid #222;border-radius:999px;color:#111;text-decoration:none;font-size:11px;font-weight:800">바로가기 →</a>`
-    : `<span style="position:absolute;left:${compactBrands?"10":"14"}px;bottom:14px;display:inline-block;padding:7px 11px;border:1px solid #bbb;border-radius:999px;color:#999;font-size:11px;font-weight:800">COMING SOON</span>`;
 
   const singleIssue=DATA.issues.length===1;
   const issueCells=singleIssue?(()=>{
@@ -765,9 +711,9 @@ function buildHtml(){
   for(let i=0;i<DATA.brands.length;i+=brandCols){
     const count=Math.min(brandCols,DATA.brands.length-i);
     const row=DATA.brands.slice(i,i+brandCols).map(x=>`<td width="${brandWidth}" valign="top" style="width:${brandWidth};padding:0 ${compactBrands?"5":"7"}px 14px;box-sizing:border-box">
-      <div style="position:relative;min-height:${brandMinH}px;padding-bottom:52px;border:1px solid #222;border-radius:16px;overflow:hidden;background:#fff;box-sizing:border-box">
+      <div style="min-height:${brandMinH}px;border:1px solid #222;border-radius:16px;overflow:hidden;background:#fff;box-sizing:border-box">
         <img src="${img(x)}" alt="" width="${brandImageW}" height="${brandImageH}" style="display:block!important;width:100%!important;max-width:${brandImageW}px!important;height:${brandImageH}px!important;margin:0 auto!important;object-fit:contain!important;background:#f6f6f6">
-        <div style="padding:${compactBrands?"11px 10px 8px":"14px 14px 8px"}"><div style="font-size:${brandTitleSize}px;line-height:1.3;font-weight:900;color:#111">${markedShort(x.name)}</div><div style="margin-top:5px;font-size:${brandCopySize}px;line-height:1.5;color:#333">${markedShort(x.copy)}</div></div>${brandCta(x.url)}
+        <div style="padding:${compactBrands?"11px 10px 13px":"14px 14px 16px"}"><div style="font-size:${brandTitleSize}px;line-height:1.3;font-weight:900;color:#111">${esc(x.name)}</div><div style="margin-top:5px;font-size:${brandCopySize}px;line-height:1.5;color:#333">${esc(x.copy)}</div>${cta(x.url)}</div>
       </div></td>`).join("");
     brandRows.push(`<tr>${row}${`<td width="${brandWidth}"></td>`.repeat(brandCols-count)}</tr>`);
   }
@@ -775,7 +721,7 @@ function buildHtml(){
   const trendRows=DATA.trends.map(x=>`<tr><td style="padding:26px 24px;border-bottom:1px dashed #bbb">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;table-layout:fixed"><tr>
       <td width="31%" valign="middle" style="width:31%;padding:0 30px 0 6px;box-sizing:border-box"><img src="${img(x)}" alt="" width="220" height="160" style="display:block!important;width:220px!important;max-width:100%!important;height:160px!important;margin:0 auto!important;object-fit:contain!important;border-radius:10px;background:#f6f6f6"></td>
-      <td width="69%" valign="middle" style="width:69%;padding-left:12px;box-sizing:border-box"><div style="font-size:24px;line-height:1.35;font-weight:900;color:#111">${markedShort(x.title)}</div><div style="display:inline-block;margin-top:10px;background:#fff3a6;font-size:15px;line-height:1.5;font-weight:900;color:#111">${markedShort(x.highlight)}</div><div style="margin-top:13px;font-size:15px;line-height:1.75;color:#222">${marked(dedupe(x.body))}</div>${cta(x.url)}</td>
+      <td width="69%" valign="middle" style="width:69%;padding-left:12px;box-sizing:border-box"><div style="font-size:24px;line-height:1.35;font-weight:900;color:#111">${esc(x.title)}</div><div style="display:inline-block;margin-top:10px;background:#fff3a6;font-size:15px;line-height:1.5;font-weight:900;color:#111">${esc(x.highlight)}</div><div style="margin-top:13px;font-size:15px;line-height:1.75;color:#222">${marked(dedupe(x.body))}</div>${cta(x.url)}</td>
     </tr></table></td></tr>`).join("");
 
   return `<div style="width:100%;max-width:1000px;margin:0 auto;background:#fff;font-family:${font};color:#111;box-sizing:border-box">
@@ -896,7 +842,7 @@ $("#parsePdfBtn").onclick=async()=>{
 };
 $("#autoBuildBtn").onclick=()=>{ if(!textItems.length){alert("먼저 PDF 자동 분석을 눌러주세요.");return} const text=linesFromItems(textItems).join("\n");autoParseText(text);renderEditors();renderPreview();mapStatus(); };
 $("#mapBtn").onclick=()=>mapStatus();
-$("#resetBtn").onclick=()=>{selectedPdf=null;pdfDoc=null;pageImage="";textItems=[];textStyles={};PDF_STYLE_RUNS=[];annotations=[];SECTION_MODE=false;SECTIONS=[];DATA={issues:[],brands:[],trends:[]};$("#pdfFile").value="";$("#pdfStatus").textContent="PDF를 넣어주세요.";$("#rawPreview").classList.add("hidden");$("#contentEditors").innerHTML="";$("#newsletterPreview").classList.add("hidden");$("#emptyPreview").classList.remove("hidden");$("#buildStatus").textContent="PDF 분석 후 섹션을 구성합니다.";today();$("#issueNo").value="";};
+$("#resetBtn").onclick=()=>{selectedPdf=null;pdfDoc=null;pageImage="";textItems=[];annotations=[];SECTION_MODE=false;SECTIONS=[];DATA={issues:[],brands:[],trends:[]};$("#pdfFile").value="";$("#pdfStatus").textContent="PDF를 넣어주세요.";$("#rawPreview").classList.add("hidden");$("#contentEditors").innerHTML="";$("#newsletterPreview").classList.add("hidden");$("#emptyPreview").classList.remove("hidden");$("#buildStatus").textContent="PDF 분석 후 섹션을 구성합니다.";today();$("#issueNo").value="";};
 ["reportTitle","issueDate","issueNo","introText"].forEach(id=>$("#"+id).addEventListener("input",()=>{if(DATA.issues.length||DATA.brands.length||DATA.trends.length)renderPreview()}));
 
 $("#addIssue").onclick=()=>{DATA.issues.push({key:"issue-"+Date.now(),type:"issue",kicker:"NEW ISSUE",title:"새 이슈 제목",body:"내용을 입력하세요.",image:pageImage,crop:"0,0,100,100",url:""});renderEditors();renderPreview()};
