@@ -164,7 +164,7 @@ textarea:focus,input:focus,select:focus{border-color:#8ba5c4;box-shadow:0 0 0 3p
 <body>
 <div class="app">
   <aside class="panel">
-    <h1>BD Newsletter Studio <small class="version-badge">V3.4</small></h1>
+    <h1>BD Newsletter Studio <small class="version-badge">V3.5</small></h1>
     <div class="sub">PDF 한 번으로 뉴스레터 구조를 읽고, 내용·이미지·링크를 점검한 뒤 파트너센터용 HTML까지 만드는 작업용 툴입니다.</div>
 
     <div class="section">
@@ -271,13 +271,8 @@ function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&l
 function clean(s){return String(s||"").replace(/\s+/g," ").trim()}
 function squash(s){return String(s||"").replace(/\s+/g,"").trim()}
 function styledText(value,allowBr=false){
-  const marks=[
-    {text:"뷰티 브랜드 성장 전략 세미나",cls:"rich-green"},{text:"오는 9월 7일 신세계 남산 오디토리움",cls:"rich-orange"},
-    {text:"마스크 누적 1억 장 이상 판매, 태국 왓슨스 시트마스크 7년 연속 1위",cls:"rich-green"},
-    {text:"국내외에서 탄탄한 인지도",cls:"rich-yellow"},{text:"합리적인 가격",cls:"rich-yellow"},
-    {text:"새 학기 준비",cls:"rich-green"},{text:"다양한 사용 환경과 취향",cls:"rich-green"},{text:"넉넉한 수납공간과 텀블러 포켓",cls:"rich-green"},
-    ...PDF_STYLE_RUNS
-  ].filter(r=>clean(r.text).length>1).sort((a,b)=>b.text.length-a.text.length);
+  // PDF 픽셀 색상을 추측하지 않습니다. 굵기만 보존하고 본문 컬러는 검정으로 통일합니다.
+  const marks=[...PDF_STYLE_RUNS].filter(r=>clean(r.text).length>1).sort((a,b)=>b.text.length-a.text.length);
   let s=esc(value),tokens=[];
   marks.forEach(({text,cls,style})=>{
     const needle=esc(clean(text));if(!needle||!s.includes(needle))return;
@@ -289,44 +284,16 @@ function styledText(value,allowBr=false){
   return s;
 }
 function richText(value){
-  let s=styledText(value);
-  s=s.replace("우즈스튜디오와 함께합니다.","우즈스튜디오와 함께합니다. 🔥");
-  s=s.replace("탄탄한 인지도를 쌓아온 브랜드입니다.","탄탄한 인지도를 쌓아온 브랜드입니다. 😻");
-  return s;
+  return styledText(value);
 }
 
 function detectPdfStyleRuns(){
-  const canvas=$("#pdfCanvas"),ctx=canvas?.getContext("2d");PDF_STYLE_RUNS=[];
-  if(!canvas||!ctx||!textItems.length)return;
-  const scale=4,runs=[];
+  const runs=[];PDF_STYLE_RUNS=[];
   textItems.forEach(it=>{
-    const text=clean(it.str);if(text.length<2)return;
-    const x=Math.max(0,Math.floor(it.transform[4]*scale));
-    const h=Math.max(8,Math.abs(it.height||it.transform[3]||10)*scale);
-    const y=Math.max(0,Math.floor(canvas.height-it.transform[5]*scale-h*1.15));
-    const w=Math.max(4,Math.min(canvas.width-x,Math.ceil((it.width||text.length*6)*scale)));
-    const hh=Math.max(4,Math.min(canvas.height-y,Math.ceil(h*1.35)));
-    let data;try{data=ctx.getImageData(x,y,w,hh).data}catch(e){return}
-    let yellow=0,sampled=0;const hueBins=Array.from({length:12},()=>({n:0,r:0,g:0,b:0}));
-    for(let p=0;p<data.length;p+=16){
-      const r=data[p],g=data[p+1],b=data[p+2],a=data[p+3];if(a<100)continue;sampled++;
-      if(r>225&&g>195&&b<155)yellow++;
-      const max=Math.max(r,g,b),min=Math.min(r,g,b),delta=max-min;
-      if(delta<55||max<90||max>245&&min>210)continue;
-      let hue=0;if(delta){if(max===r)hue=60*(((g-b)/delta)%6);else if(max===g)hue=60*((b-r)/delta+2);else hue=60*((r-g)/delta+4)}if(hue<0)hue+=360;
-      const bin=hueBins[Math.floor(hue/30)%12];bin.n++;bin.r+=r;bin.g+=g;bin.b+=b;
-    }
-    const family=String(textStyles[it.fontName]?.fontFamily||"");
-    const isBold=/bold|black|heavy|semibold|extrabold/i.test(family);
-    const dominant=hueBins.sort((a,b)=>b.n-a.n)[0];let cls="",style="";
-    if(sampled&&yellow/sampled>.12)cls="rich-yellow";
-    else if(dominant.n>=10&&dominant.n/sampled>.018){
-      const r=Math.round(dominant.r/dominant.n),g=Math.round(dominant.g/dominant.n),b=Math.round(dominant.b/dominant.n);
-      style=`color:rgb(${r},${g},${b});font-family:'Gmarket Sans',Pretendard,sans-serif;font-weight:900`;
-    }else if(isBold)cls="pdf-bold";
-    if(cls||style)runs.push({text,cls,style});
+    const text=clean(it.str),family=String(textStyles[it.fontName]?.fontFamily||"");
+    if(text.length>1&&/bold|black|heavy|semibold|extrabold/i.test(family))runs.push({text,cls:"pdf-bold"});
   });
-  const seen=new Set();PDF_STYLE_RUNS=runs.filter(r=>{const k=(r.cls||r.style)+"|"+r.text;if(seen.has(k))return false;seen.add(k);return true});
+  const seen=new Set();PDF_STYLE_RUNS=runs.filter(r=>{const k=r.text;if(seen.has(k))return false;seen.add(k);return true});
 }
 function cropCanvasData(crop){
   const src=$("#pdfCanvas");
@@ -349,7 +316,8 @@ function inferredIssueSnapshot(issues){
   const canvas=$("#pdfCanvas"),topPct=text=>{const r=rows.find(x=>squash(x.text).includes(squash(text)));return r?Math.max(0,100-(r.y*4/canvas.height*100)-.8):null};
   const start=topPct("TEAM - BD ISSUE"),end=topPct("이달의 신규 브랜드 소개");
   if(start==null||end==null||end<=start)return null;
-  const y=Math.max(0,start-.15),crop=`2.8,${y},94.4,${Math.max(5,end-y-1)}`;
+  // TEAM 제목/설명은 HTML로 고정하므로 PDF에서는 그 아래 실제 이슈 내용만 자릅니다.
+  const y=Math.max(0,start+3.6),crop=`2.8,${y},94.4,${Math.max(5,end-y-1)}`;
   const links=issues.map(x=>({title:x.title||"이슈",url:x.url||""})).filter(x=>x.url);
   return {key:"issue-original",type:"issue",snapshot:true,kicker:"ORIGINAL ISSUE",title:"TEAM - BD ISSUE 원본",body:"",crop,image:cropCanvasData(crop),url:links[0]?.url||"",links,fit:"contain"};
 }
@@ -459,7 +427,7 @@ function urlForRect(region){
 function presetData(no){
   const presets={
     13:{
-      issueSnapshot:"2.8,5.2,94.4,27.3",
+      issueSnapshot:"2.8,7.8,94.4,24.7",
       issues:[
         ["NEW BRAND ISSUE","금강제화, G마켓 공식 입점!","5,8.5,43,23","5,11,43,10"],
         ["NEW BRAND ISSUE","치킨텐더 뭐 먹을까? 이지끼니!","51,8.5,44,23","51,11,44,10"]
@@ -468,13 +436,13 @@ function presetData(no){
       brandStart:34.5,brandEnd:78.5,trendStart:81.5,trendNames:["라벨린 스킨솔루션 마스크팩 5종 100매","아이디플코스메틱 효소뿅석고팩"]
     },
     14:{
-      issueSnapshot:"2.8,5.2,94.4,22.3",
+      issueSnapshot:"2.8,5.0,94.4,22.5",
       issues:[["NEW BRAND ISSUE","키스미, G마켓 공식 입점!","5,5,90,21","50,5,45,20"]],
       brands:["렉슨","휴롬","BBQ","로랜텍","리리앤코","이노스페이스원","트로큭","폴리몰리","레이비","이율"],
       brandStart:27.5,brandEnd:71.8,trendStart:75.8,trendNames:["튜브트리 래쉬가드 긴팔 반팔 수영복","나와아기 원터치 물놀이 텐트","TS스포츠 아레나 말랑파우치 실리콘 수영가방"]
     },
     15:{
-      issueSnapshot:"2.8,5.2,94.4,28.3",
+      issueSnapshot:"2.8,6.0,94.4,27.5",
       issues:[["NEW BRAND ISSUE","프리미엄 타이어의 기준, 미쉐린 입점","5,6,90,27","52,7,44,25"]],
       brands:["오크베리","에넥스","소르니아","어프어프","아카라","파파레서피","총각쓰떡","킹스미스","예림당","아토808"],
       brandStart:35,brandEnd:78.5,trendStart:82,trendNames:["912 니치향수 오드퍼퓸 40ml","프리티스킨 러브 로맨틱 퍼퓸 50ml"]
@@ -665,7 +633,7 @@ function renderPreview(){
     <div class="news-intro">${esc(intro)}</div>
 
     <section class="block">
-      ${DATA.issues[0]?.snapshot?"":'<div class="block-head"><h2>TEAM - BD ISSUE</h2><p>BD팀의 신규 입점 브랜드 중 이슈 상품을 소개합니다.</p></div>'}
+      <div class="block-head"><h2>TEAM - BD ISSUE</h2><p>BD팀의 신규 입점 브랜드 중 이슈 상품을 소개합니다.</p></div>
       <div class="issue-grid ${DATA.issues.length===1?"single":""}">
         ${DATA.issues.map(previewIssueCard).join("")}
       </div>
@@ -844,7 +812,7 @@ function buildHtml(){
         <td width="190" align="right" valign="middle" style="width:190px;padding:20px 24px;font-size:14px;font-weight:800;white-space:nowrap">${esc($("#issueDate").value)} · ${esc($("#issueNo").value)}</td>
       </tr></table>
       <div style="margin-top:14px;padding:15px 18px;background:#222;color:#fff;font-size:14px;line-height:1.5;font-weight:800">${esc($("#introText").value)}</div>
-      ${DATA.issues[0]?.snapshot?"":'<div style="padding:34px 0 14px;font-size:34px;line-height:1.2;font-weight:900">✦ TEAM - BD ISSUE</div><div style="margin-bottom:14px;font-size:14px;font-weight:700;color:#555">BD팀의 신규 입점 브랜드 중 이슈 상품을 소개합니다.</div>'}
+      <div style="padding:34px 0 14px;font-size:34px;line-height:1.2;font-weight:900">✦ TEAM - BD ISSUE</div><div style="margin-bottom:14px;font-size:14px;font-weight:700;color:#555">BD팀의 신규 입점 브랜드 중 이슈 상품을 소개합니다.</div>
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;table-layout:fixed"><tr>${issueCells}</tr></table>
       <div style="padding:34px 0 14px;font-size:30px;line-height:1.25;font-weight:900">✦ 이달의 신규 브랜드 소개</div><div style="margin-bottom:14px;font-size:14px;font-weight:700;color:#555">새롭게 입점한 브랜드를 한눈에 만나보세요.</div>
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;table-layout:fixed">${brandRows.join("")}</table>
