@@ -144,7 +144,7 @@ textarea:focus,input:focus,select:focus{border-color:#8ba5c4;box-shadow:0 0 0 3p
 <body>
 <div class="app">
   <aside class="panel">
-    <h1>BD Newsletter Studio <small class="version-badge">V2.2</small></h1>
+    <h1>BD Newsletter Studio <small class="version-badge">V2.3</small></h1>
     <div class="sub">PDF 한 번으로 뉴스레터 구조를 읽고, 내용·이미지·링크를 점검한 뒤 파트너센터용 HTML까지 만드는 작업용 툴입니다.</div>
 
     <div class="section">
@@ -535,22 +535,40 @@ function mapStatus(){
 }
 
 function buildHtml(){
-  const clone=$("#newsletterPreview").cloneNode(true);
-  clone.classList.remove("hidden");
+  const source=$("#newsletterPreview").querySelector(".news");
+  const clone=source.cloneNode(true);
   const logo=clean($("#logoUrl").value);
   const logoImg=clone.querySelector(".news-brand img");
   if(logoImg)logoImg.src=logo;
-  const css=[...document.styleSheets].map(s=>{try{return [...s.cssRules].map(r=>r.cssText).join("\n")}catch(e){return ""}}).join("\n");
-  return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${css}
-.card-link,.text-link,.trend-media-link,.issue-media-link{
-  color:inherit;text-decoration:none;
-}
-.card-link{display:block}
-.card-link h3,.text-link h3{color:inherit}
-.card-link:hover h3,.text-link:hover h3{text-decoration:underline;text-underline-offset:3px}
-.trend-media-link,.issue-media-link{display:block}
 
-</style></head><body>${clone.outerHTML}</body></html>`;
+  // 파트너센터는 <head>/<style>을 제거하므로 화면의 계산된 스타일을 태그마다 직접 삽입합니다.
+  const props=[
+    "display","position","box-sizing","width","max-width","min-width","height","min-height","max-height",
+    "margin","margin-top","margin-right","margin-bottom","margin-left","padding","padding-top","padding-right","padding-bottom","padding-left",
+    "grid-template-columns","grid-template-rows","grid-column","grid-row","gap","column-gap","row-gap","flex","flex-direction","flex-wrap","flex-grow","flex-shrink","flex-basis","align-items","align-self","justify-content","justify-self","order",
+    "overflow","overflow-x","overflow-y","object-fit","object-position","aspect-ratio",
+    "background","background-color","background-image","background-size","background-position","background-repeat",
+    "border","border-width","border-style","border-color","border-radius","box-shadow",
+    "color","font-family","font-size","font-weight","font-style","line-height","letter-spacing","text-align","text-decoration","text-transform","white-space","word-break","overflow-wrap","vertical-align","opacity"
+  ];
+  const srcEls=[source,...source.querySelectorAll("*")];
+  const outEls=[clone,...clone.querySelectorAll("*")];
+  srcEls.forEach((el,i)=>{
+    const out=outEls[i],cs=getComputedStyle(el);
+    props.forEach(p=>{const v=cs.getPropertyValue(p);if(v)out.style.setProperty(p,v)});
+  });
+  clone.style.width="100%";
+  clone.style.maxWidth="1000px";
+  clone.style.margin="0 auto";
+  clone.style.background="#fff";
+  clone.querySelectorAll("a").forEach(a=>{a.style.textDecoration="none"});
+
+  // 일부 에디터에서 semantic 태그를 문자로 처리하는 문제를 막습니다.
+  const safeHtml=clone.outerHTML
+    .replace(/<(\/?)header\b/gi,"<$1div")
+    .replace(/<(\/?)section\b/gi,"<$1div")
+    .replace(/<(\/?)article\b/gi,"<$1div");
+  return `<div style="width:100%;max-width:1000px;margin:0 auto;background:#fff">${safeHtml}</div><p><br></p>`;
 }
 
 function allContentItems(){
