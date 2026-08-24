@@ -78,6 +78,7 @@ textarea:focus,input:focus,select:focus{border-color:#8ba5c4;box-shadow:0 0 0 3p
 .block-head h2:before{content:"✦";color:var(--green);margin-right:7px}
 .block-head p{margin:7px 0 0;font-size:14px;color:#565b61;font-weight:700}
 .issue-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.issue-grid.single{grid-template-columns:1fr}
 .content-card{border:1.5px solid #34373a;border-radius:17px;overflow:hidden;background:#fff;box-shadow:3px 3px 0 #eef0f2}
 .issue-card{padding:22px}
 .kicker{display:inline-block;background:var(--lime);border:1.5px solid #34373a;padding:7px 9px;font:900 11px/1 var(--display-font);margin-bottom:13px}
@@ -144,7 +145,7 @@ textarea:focus,input:focus,select:focus{border-color:#8ba5c4;box-shadow:0 0 0 3p
 <body>
 <div class="app">
   <aside class="panel">
-    <h1>BD Newsletter Studio <small class="version-badge">V2.8</small></h1>
+    <h1>BD Newsletter Studio <small class="version-badge">V2.9</small></h1>
     <div class="sub">PDF 한 번으로 뉴스레터 구조를 읽고, 내용·이미지·링크를 점검한 뒤 파트너센터용 HTML까지 만드는 작업용 툴입니다.</div>
 
     <div class="section">
@@ -367,10 +368,71 @@ function detectDateIssue(text){
   if(n)$("#issueNo").value=n[1]+"호";
 }
 
+function textLinesInRegion(region){
+  const [x,y,w,h]=String(region).split(",").map(Number),canvas=$("#pdfCanvas"),rows=[];
+  textItems.forEach(it=>{
+    const px=it.transform[4]*4/canvas.width*100;
+    const py=100-it.transform[5]*4/canvas.height*100;
+    if(px<x||px>x+w||py<y||py>y+h)return;
+    let row=rows.find(r=>Math.abs(r.y-it.transform[5])<3);
+    if(!row){row={y:it.transform[5],items:[]};rows.push(row)}row.items.push(it);
+  });
+  return rows.sort((a,b)=>b.y-a.y).map(r=>r.items.sort((a,b)=>a.transform[4]-b.transform[4]).map(i=>i.str).join(" ").trim()).filter(Boolean);
+}
+function urlForRect(region){
+  const [x,y,w,h]=String(region).split(",").map(Number);
+  const hit=annotations.find(a=>{if(!a.nrect)return false;const cx=a.nrect.x+a.nrect.w/2,cy=a.nrect.y+a.nrect.h/2;return cx>=x&&cx<=x+w&&cy>=y&&cy<=y+h});
+  return hit?.url||"";
+}
+function presetData(no){
+  const presets={
+    13:{
+      issues:[
+        ["NEW BRAND ISSUE","금강제화, G마켓 공식 입점!","5,8.5,43,23","5,11,43,10"],
+        ["NEW BRAND ISSUE","치킨텐더 뭐 먹을까? 이지끼니!","51,8.5,44,23","51,11,44,10"]
+      ],
+      brands:["웰더마","얼모스트블루","데자뷰","에어룸","락브로스","코멕스","렌지메이트","페스트세븐","삼화","블라이드"],
+      brandStart:34.5,brandEnd:78.5,trendStart:81.5,trendNames:["라벨린 스킨솔루션 마스크팩 5종 100매","아이디플코스메틱 효소뿅석고팩"]
+    },
+    14:{
+      issues:[["NEW BRAND ISSUE","키스미, G마켓 공식 입점!","5,5,90,21","50,5,45,20"]],
+      brands:["렉슨","휴롬","BBQ","로랜텍","리리앤코","이노스페이스원","트로큭","폴리몰리","레이비","이율"],
+      brandStart:27.5,brandEnd:71.8,trendStart:75.8,trendNames:["튜브트리 래쉬가드 긴팔 반팔 수영복","나와아기 원터치 물놀이 텐트","TS스포츠 아레나 말랑파우치 실리콘 수영가방"]
+    },
+    15:{
+      issues:[["NEW BRAND ISSUE","프리미엄 타이어의 기준, 미쉐린 입점","5,6,90,27","52,7,44,25"]],
+      brands:["오크베리","에넥스","소르니아","어프어프","아카라","파파레서피","총각쓰떡","킹스미스","예림당","아토808"],
+      brandStart:35,brandEnd:78.5,trendStart:82,trendNames:["912 니치향수 오드퍼퓸 40ml","프리티스킨 러브 로맨틱 퍼퓸 50ml"]
+    }
+  };
+  const p=presets[no];if(!p)return null;
+  const issues=p.issues.map(([kicker,title,textRegion,imageRegion],i)=>{
+    const lines=textLinesInRegion(textRegion).filter(x=>!squash(x).includes(squash(title))&&!x.includes("TEAM - BD ISSUE")&&!x.includes("BD팀의 신규"));
+    return {key:"preset-issue-"+i,type:"issue",kicker,title,body:lines.join(" "),image:cropCanvasData(imageRegion),crop:imageRegion,url:urlForRect(textRegion),fit:"contain"};
+  });
+  const rowH=(p.brandEnd-p.brandStart)/5;
+  const brands=p.brands.map((name,i)=>{
+    const col=i%2,row=Math.floor(i/2),x=col?50.8:5.8,y=p.brandStart+row*rowH;
+    const imageRegion=x+","+y+",21.8,"+(rowH-.5),textRegion=(x+21.8)+","+y+",22.5,"+(rowH-.5);
+    const lines=textLinesInRegion(textRegion).filter(t=>!t.includes("보러가기")&&!t.includes("COMING SOON"));
+    return {key:"preset-brand-"+i,name,copy:lines.filter(t=>squash(t)!==squash(name)).join(" ")||"",image:cropCanvasData(imageRegion),crop:imageRegion,url:urlForRect(textRegion),fit:"cover"};
+  });
+  const trendH=(98-p.trendStart)/p.trendNames.length;
+  const trends=p.trendNames.map((fallback,i)=>{
+    const y=p.trendStart+i*trendH,imageRegion="6.5,"+y+",24,"+(trendH-.5),textRegion="31,"+y+",63,"+(trendH-.5);
+    const lines=textLinesInRegion(textRegion),title=lines[0]||fallback,highlight=lines[1]||"",body=lines.slice(2).join(" ");
+    return {key:"preset-trend-"+i,title,highlight,body,image:cropCanvasData(imageRegion),crop:imageRegion,url:urlForRect(textRegion),fit:"contain"};
+  });
+  SECTION_MODE=false;SECTIONS=[];return {issues,brands,trends};
+}
+
 function autoParseText(text){
   const normalized=text.replace(/\n+/g,"\n");
   const compact=squash(normalized);
   detectDateIssue(normalized);
+  const presetNo=parseInt($("#issueNo").value,10);
+  const preset=presetData(presetNo);
+  if(preset){DATA=preset;return DATA}
 
   const CROP={
     // 실제 PDF 이미지 박스 기준
@@ -494,7 +556,7 @@ function renderPreview(){
 
     <section class="block">
       <div class="block-head"><h2>TEAM - BD ISSUE</h2><p>BD팀의 신규 입점 브랜드 중 이슈 상품을 소개합니다.</p></div>
-      <div class="issue-grid">
+      <div class="issue-grid ${DATA.issues.length===1?"single":""}">
         ${DATA.issues.map(x=>x.url
           ? `<a class="content-card issue-card card-link" href="${esc(x.url)}" target="_blank" rel="noopener"><span class="kicker">${esc(x.kicker)}</span>${media(x)}<h3>${x.title}</h3><p>${richText(x.body)}</p><span class="cta">보러가기 →</span></a>`
           : `<article class="content-card issue-card"><span class="kicker">${esc(x.kicker)}</span>${media(x)}<h3>${x.title}</h3><p>${richText(x.body)}</p></article>`).join("")}
@@ -573,7 +635,7 @@ function mapStatus(){
   }
   let missing=0,total=0;
   [...DATA.issues,...DATA.brands,...DATA.trends].forEach(x=>{total++;if(!x.url)missing++;});
-  $("#buildStatus").innerHTML=`자동 구성 완료 · 총 ${total}개 콘텐츠<br><span class="map-ok">이미지: PDF 이미지 박스 기준 분리</span> · <span class="${missing?'map-warn':'map-ok'}">링크 없는 콘텐츠 ${missing}개</span><br><span class="helper">이번 16호는 실제 이미지 박스 좌표로 보정했습니다. 다음 호에서 어긋나는 항목만 이미지 영역을 다시 지정하면 됩니다.</span>`;
+  $("#buildStatus").innerHTML=`자동 구성 완료 · 총 ${total}개 콘텐츠<br><span class="map-ok">이미지: 호별 레이아웃 유형에 맞춰 분리</span> · <span class="${missing?'map-warn':'map-ok'}">링크 없는 콘텐츠 ${missing}개</span><br><span class="helper">이슈 수와 이미지 형태에 따라 1열/2열 및 contain/cover를 자동 적용합니다.</span>`;
 }
 
 function buildHtml(){
@@ -600,10 +662,11 @@ function buildHtml(){
     ? `<a href="${esc(url)}" target="_blank" rel="noopener" style="display:inline-block;margin-top:14px;padding:8px 13px;border:1px solid #222;border-radius:999px;color:#111;text-decoration:none;font-size:13px;font-weight:800">바로가기 →</a>`
     : `<span style="display:inline-block;margin-top:14px;padding:8px 13px;border:1px solid #bbb;border-radius:999px;color:#999;font-size:13px;font-weight:800">COMING SOON</span>`;
 
-  const issueCells=DATA.issues.map(x=>`<td width="50%" valign="top" style="width:50%;padding:0 8px 16px;box-sizing:border-box">
+  const singleIssue=DATA.issues.length===1;
+  const issueCells=DATA.issues.map(x=>`<td width="${singleIssue?"100%":"50%"}" valign="top" style="width:${singleIssue?"100%":"50%"};padding:0 8px 16px;box-sizing:border-box">
     <div style="min-height:500px;padding:22px;border:1px solid #222;border-radius:18px;box-sizing:border-box;background:#fff">
       <span style="display:inline-block;margin-bottom:18px;padding:6px 10px;border:1px solid #222;background:#f7faec;font-size:12px;font-weight:900">${esc(x.kicker)}</span>
-      <img src="${img(x)}" alt="" width="360" height="175" style="display:block!important;width:100%!important;max-width:360px!important;height:175px!important;margin:0 auto!important;object-fit:contain!important;border-radius:10px;background:#f6f6f6">
+      <img src="${img(x)}" alt="" width="${singleIssue?"720":"360"}" height="${singleIssue?"350":"175"}" style="display:block!important;width:100%!important;max-width:${singleIssue?"720":"360"}px!important;height:${singleIssue?"350":"175"}px!important;margin:0 auto!important;object-fit:contain!important;border-radius:10px;background:#f6f6f6">
       <div style="margin-top:16px;color:#111;font-size:26px;line-height:1.32;font-weight:900;letter-spacing:-1px">${br(x.title)}</div>
       <div style="margin-top:18px;color:#222;font-size:15px;line-height:1.75;font-weight:500">${marked(dedupe(x.body))}</div>${x.url?cta(x.url):""}
     </div></td>`).join("");
