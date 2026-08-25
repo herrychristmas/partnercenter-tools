@@ -164,7 +164,7 @@ textarea:focus,input:focus,select:focus{border-color:#8ba5c4;box-shadow:0 0 0 3p
 <body>
 <div class="app">
   <aside class="panel">
-    <h1>BD Newsletter Studio <small class="version-badge">V3.5</small></h1>
+    <h1>BD Newsletter Studio <small class="version-badge">V3.6</small></h1>
     <div class="sub">PDF 한 번으로 뉴스레터 구조를 읽고, 내용·이미지·링크를 점검한 뒤 파트너센터용 HTML까지 만드는 작업용 툴입니다.</div>
 
     <div class="section">
@@ -316,10 +316,14 @@ function inferredIssueSnapshot(issues){
   const canvas=$("#pdfCanvas"),topPct=text=>{const r=rows.find(x=>squash(x.text).includes(squash(text)));return r?Math.max(0,100-(r.y*4/canvas.height*100)-.8):null};
   const start=topPct("TEAM - BD ISSUE"),end=topPct("이달의 신규 브랜드 소개");
   if(start==null||end==null||end<=start)return null;
-  // TEAM 제목/설명은 HTML로 고정하므로 PDF에서는 그 아래 실제 이슈 내용만 자릅니다.
-  const y=Math.max(0,start+3.6),crop=`2.8,${y},94.4,${Math.max(5,end-y-1)}`;
+  // V3.6: BD ISSUE는 내부 카드/텍스트를 다시 조립하지 않습니다.
+  // TEAM - BD ISSUE 제목부터 다음 섹션 제목 직전까지를 한 장의 원본 이미지로 변환합니다.
+  // 상하 여백만 아주 조금 포함해 제목/설명/이미지가 잘리지 않도록 합니다.
+  const y=Math.max(0,start-1.0);
+  const bottom=Math.min(100,end-0.8);
+  const crop=`2.2,${y},95.6,${Math.max(5,bottom-y)}`;
   const links=issues.map(x=>({title:x.title||"이슈",url:x.url||""})).filter(x=>x.url);
-  return {key:"issue-original",type:"issue",snapshot:true,kicker:"ORIGINAL ISSUE",title:"TEAM - BD ISSUE 원본",body:"",crop,image:cropCanvasData(crop),url:links[0]?.url||"",links,fit:"contain"};
+  return {key:"issue-original",type:"issue",snapshot:true,includesHeader:true,kicker:"ORIGINAL ISSUE",title:"TEAM - BD ISSUE 원본",body:"",crop,image:cropCanvasData(crop),url:links[0]?.url||"",links,fit:"contain"};
 }
 function createOriginalSections(){
   const rows=[];
@@ -486,7 +490,13 @@ function autoParseText(text){
   detectDateIssue(normalized);
   const presetNo=parseInt($("#issueNo").value,10);
   const preset=presetData(presetNo);
-  if(preset){DATA=preset;return DATA}
+  if(preset){
+    DATA=preset;
+    // 프리셋 호수도 BD ISSUE만큼은 고정 좌표 대신 실제 섹션 제목을 기준으로 원본 전체를 변환합니다.
+    const originalIssue=inferredIssueSnapshot(DATA.issues);
+    if(originalIssue)DATA.issues=[originalIssue];
+    return DATA;
+  }
 
   const CROP={
     // 실제 PDF 이미지 박스 기준
@@ -633,7 +643,7 @@ function renderPreview(){
     <div class="news-intro">${esc(intro)}</div>
 
     <section class="block">
-      <div class="block-head"><h2>TEAM - BD ISSUE</h2><p>BD팀의 신규 입점 브랜드 중 이슈 상품을 소개합니다.</p></div>
+      ${DATA.issues[0]?.snapshot&&DATA.issues[0]?.includesHeader?"":'<div class="block-head"><h2>TEAM - BD ISSUE</h2><p>BD팀의 신규 입점 브랜드 중 이슈 상품을 소개합니다.</p></div>'}
       <div class="issue-grid ${DATA.issues.length===1?"single":""}">
         ${DATA.issues.map(previewIssueCard).join("")}
       </div>
@@ -673,11 +683,8 @@ function renderEditors(){
             <div><span class="pill issue">원본 이슈</span> <b style="font-size:13px">PDF 디자인 그대로 사용</b></div>
           </div>
           <img class="mini-thumb" src="${x.hostedImage||x.image||pageImage}" style="width:100%;height:auto;max-height:210px;object-fit:contain;margin-top:9px;background:#fff">
-          <div class="crop-grid">
-            ${["왼쪽 X","위쪽 Y","너비 W","높이 H"].map((label,i)=>`<label>${label}<input type="number" min="0" max="100" step="0.1" data-crop-part="${i}" data-type="issue" data-idx="${idx}" value="${Number.isFinite(crop[i])?crop[i]:0}"></label>`).join("")}
-          </div>
           <input data-f="url" data-type="issue" data-idx="${idx}" value="${esc(x.url||"")}" placeholder="이미지 전체 CTA URL (선택)" style="margin-top:8px">
-          <div class="snapshot-note">글씨·색상·이모지·사진 배치를 원본 그대로 보존합니다. 숫자를 바꾸면 잘라낼 영역만 조정되며, 글자 자체는 재조립하지 않습니다.</div>`;
+          <div class="snapshot-note">V3.6 · BD ISSUE는 제목부터 다음 섹션 직전까지 PDF 원본을 한 장으로 변환합니다. 별도 크롭 조절이나 카드 재구성을 하지 않아 호마다 배치가 달라도 원본 모양을 그대로 유지합니다.</div>`;
         host.appendChild(el);return;
       }
       el.innerHTML=`
@@ -812,7 +819,7 @@ function buildHtml(){
         <td width="190" align="right" valign="middle" style="width:190px;padding:20px 24px;font-size:14px;font-weight:800;white-space:nowrap">${esc($("#issueDate").value)} · ${esc($("#issueNo").value)}</td>
       </tr></table>
       <div style="margin-top:14px;padding:15px 18px;background:#222;color:#fff;font-size:14px;line-height:1.5;font-weight:800">${esc($("#introText").value)}</div>
-      <div style="padding:34px 0 14px;font-size:34px;line-height:1.2;font-weight:900">✦ TEAM - BD ISSUE</div><div style="margin-bottom:14px;font-size:14px;font-weight:700;color:#555">BD팀의 신규 입점 브랜드 중 이슈 상품을 소개합니다.</div>
+      ${DATA.issues[0]?.snapshot&&DATA.issues[0]?.includesHeader?"":'<div style="padding:34px 0 14px;font-size:34px;line-height:1.2;font-weight:900">✦ TEAM - BD ISSUE</div><div style="margin-bottom:14px;font-size:14px;font-weight:700;color:#555">BD팀의 신규 입점 브랜드 중 이슈 상품을 소개합니다.</div>'}
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;table-layout:fixed"><tr>${issueCells}</tr></table>
       <div style="padding:34px 0 14px;font-size:30px;line-height:1.25;font-weight:900">✦ 이달의 신규 브랜드 소개</div><div style="margin-bottom:14px;font-size:14px;font-weight:700;color:#555">새롭게 입점한 브랜드를 한눈에 만나보세요.</div>
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;table-layout:fixed">${brandRows.join("")}</table>
