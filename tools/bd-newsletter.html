@@ -101,17 +101,17 @@ textarea:focus,input:focus,select:focus{border-color:#8ba5c4;box-shadow:0 0 0 3p
 .brand-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
 .brand-grid.cols-5{gap:11px}
 .brand-grid.cols-5 .brand-card .media-box{height:148px}
-.brand-grid.cols-5 .brand-card h3{font-size:17px;margin:12px 11px 4px}
+.brand-grid.cols-5 .brand-card{height:330px}.brand-grid.cols-5 .brand-card h3{font-size:17px;margin:12px 11px 4px}
 .brand-grid.cols-5 .brand-card p{font-size:12px;line-height:1.42;margin:0 11px 10px;min-height:35px}
 .brand-grid.cols-5 .brand-card .cta{font-size:10px;margin-left:11px;padding:6px 9px}
-.brand-card{position:relative;padding-bottom:18px;display:flex;flex-direction:column;transition:transform .22s ease,box-shadow .22s ease,border-color .22s ease}
+.brand-card{position:relative;height:348px;padding-bottom:18px;display:flex;flex-direction:column;overflow:hidden;transition:transform .22s ease,box-shadow .22s ease,border-color .22s ease}
 .brand-card:hover{transform:translateY(-6px);box-shadow:7px 9px 0 #e7ebee;border-color:#111}
 .brand-card:hover .media-box img{transform:scale(1.045)}
 .brand-card .media-box{height:176px;margin:0;border:0;border-bottom:1px solid #e1e5e8;border-radius:0;background:#f8f8f7}
 .badge{position:absolute;left:9px;top:9px;z-index:2;border:1px solid #555;border-radius:999px;padding:4px 7px;font-size:9px;font-weight:950;background:var(--pink)}
 .badge.soon{background:var(--lime)}
 .brand-card h3{font:950 21px/1.25 var(--display-font);margin:15px 14px 5px}
-.brand-card p{font-size:14px;line-height:1.45;color:#464c52;margin:0 14px 12px;min-height:40px;font-weight:650}
+.brand-card p{font-size:14px;line-height:1.45;color:#464c52;margin:0 14px 12px;min-height:40px;font-weight:650;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
 .brand-card .cta{margin-top:auto;align-self:flex-start}
 .cta{display:inline-block;margin-left:14px;border:1.3px solid #333;border-radius:999px;padding:7px 11px;font-size:12px;font-weight:900;text-decoration:none;color:#222;background:#fff;transition:.18s ease}
 .cta:not(.disabled):hover{background:#222;color:#fff;transform:translateY(-1px)}
@@ -164,7 +164,7 @@ textarea:focus,input:focus,select:focus{border-color:#8ba5c4;box-shadow:0 0 0 3p
 <body>
 <div class="app">
   <aside class="panel">
-    <h1>BD Newsletter Studio <small class="version-badge">V3.6</small></h1>
+    <h1>BD Newsletter Studio <small class="version-badge">V3.7</small></h1>
     <div class="sub">PDF 한 번으로 뉴스레터 구조를 읽고, 내용·이미지·링크를 점검한 뒤 파트너센터용 HTML까지 만드는 작업용 툴입니다.</div>
 
     <div class="section">
@@ -260,6 +260,7 @@ let DATA={issues:[],brands:[],trends:[]};
 
 const sampleBrandNames=["일리커피","삼육","로즈몽","요기보","릴리이브","미정당","리복키즈","알톤","이너시아"];
 const knownTrendNames=["모닝글로리","자바","시로카라"];
+const DEFAULT_LOGO_URL="https://upload.wikimedia.org/wikipedia/commons/b/bf/Gmarket_logo.svg";
 
 function today(){
   const d=new Date(), y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,"0"), day=String(d.getDate()).padStart(2,"0");
@@ -270,6 +271,27 @@ today();
 function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
 function clean(s){return String(s||"").replace(/\s+/g," ").trim()}
 function squash(s){return String(s||"").replace(/\s+/g,"").trim()}
+function joinPdfItems(items){
+  const sorted=[...items].sort((a,b)=>a.transform[4]-b.transform[4]);
+  let out="",prev=null;
+  for(const it of sorted){
+    const cur=String(it.str||"");
+    if(!cur)continue;
+    if(!prev){out=cur;prev=it;continue}
+    const prevText=String(prev.str||"");
+    const prevX=Number(prev.transform?.[4]||0),curX=Number(it.transform?.[4]||0);
+    const prevW=Number(prev.width||0);
+    const fontSize=Math.max(Math.abs(Number(prev.transform?.[0]||0)),Math.abs(Number(prev.transform?.[3]||0)),8);
+    const gap=curX-(prevX+prevW);
+    const already=/\s$/.test(out)||/^\s/.test(cur);
+    const prevPunct=/[(\[\{·•/\-]$/.test(prevText);
+    const curPunct=/^[),.!?:;％%℃°\]\}·•/]/.test(cur);
+    const needsSpace=!already&&!prevPunct&&!curPunct&&gap>Math.max(1.1,fontSize*.17);
+    out+=(needsSpace?" ":"")+cur;
+    prev=it;
+  }
+  return out.replace(/\s+([),.!?:;％%℃°])/g,"$1").replace(/([([{])\s+/g,"$1").replace(/\s+/g," ").trim();
+}
 function styledText(value,allowBr=false){
   // PDF 픽셀 색상을 추측하지 않습니다. 굵기만 보존하고 본문 컬러는 검정으로 통일합니다.
   const marks=[...PDF_STYLE_RUNS].filter(r=>clean(r.text).length>1).sort((a,b)=>b.text.length-a.text.length);
@@ -312,8 +334,8 @@ function inferredIssueSnapshot(issues){
   if(!issues?.length||!textItems.length)return null;
   const rows=[];
   textItems.forEach(it=>{const y=it.transform[5];let row=rows.find(r=>Math.abs(r.y-y)<3);if(!row){row={y,items:[]};rows.push(row)}row.items.push(it)});
-  rows.forEach(r=>r.text=r.items.sort((a,b)=>a.transform[4]-b.transform[4]).map(x=>x.str).join(" ").trim());
-  const canvas=$("#pdfCanvas"),topPct=text=>{const r=rows.find(x=>squash(x.text).includes(squash(text)));return r?Math.max(0,100-(r.y*4/canvas.height*100)-.8):null};
+  rows.forEach(r=>r.text=joinPdfItems(r.items));
+  const canvas=$("#pdfCanvas"),topPct=text=>{const r=rows.find(x=>squash(x.text).includes(squash(text)));return r?Math.max(0,100-(r.y*6/canvas.height*100)-.8):null};
   const start=topPct("TEAM - BD ISSUE"),end=topPct("이달의 신규 브랜드 소개");
   if(start==null||end==null||end<=start)return null;
   // V3.6: BD ISSUE는 내부 카드/텍스트를 다시 조립하지 않습니다.
@@ -331,17 +353,17 @@ function createOriginalSections(){
     const y=it.transform[5];let row=rows.find(r=>Math.abs(r.y-y)<3);
     if(!row){row={y,items:[]};rows.push(row)}row.items.push(it);
   });
-  rows.forEach(r=>r.text=r.items.sort((a,b)=>a.transform[4]-b.transform[4]).map(x=>x.str).join(" ").trim());
+  rows.forEach(r=>r.text=joinPdfItems(r.items));
   const canvas=$("#pdfCanvas");
   const topPct=text=>{
     const r=rows.find(x=>squash(x.text).includes(squash(text)));
-    return r?Math.max(0,100-(r.y*4/canvas.height*100)-.8):null;
+    return r?Math.max(0,100-(r.y*6/canvas.height*100)-.8):null;
   };
   const brandY=topPct("이달의 신규 브랜드 소개");
   const trendY=topPct("트렌드 키워드를 통한 신규 셀러 입점");
   if(brandY==null||trendY==null)return false;
   const footerRow=rows.find(x=>squash(x.text).includes("BusinessDevelopment팀은"));
-  const footerY=footerRow?Math.min(100,100-(footerRow.y*4/canvas.height*100)+1):98.5;
+  const footerY=footerRow?Math.min(100,100-(footerRow.y*6/canvas.height*100)+1):98.5;
   const defs=[
     ["issue","TEAM - BD ISSUE",0,brandY],
     ["brand","이달의 신규 브랜드 소개",brandY,trendY],
@@ -361,7 +383,7 @@ function linesFromItems(items){
     if(!row){row={y,items:[]};rows.push(row)}
     row.items.push(it);
   });
-  return rows.sort((a,b)=>b.y-a.y).map(r=>r.items.sort((a,b)=>a.transform[4]-b.transform[4]).map(i=>i.str).join(" ").trim()).filter(Boolean);
+  return rows.sort((a,b)=>b.y-a.y).map(r=>joinPdfItems(r.items)).filter(Boolean);
 }
 
 function extractBetween(text,start,end){
@@ -381,7 +403,7 @@ async function loadPdf(file){
   pdfDoc=await pdfjsLib.getDocument({data:buf}).promise;
   const page=await pdfDoc.getPage(1);
   // 작은 PDF 크롭을 다시 확대할 때 흐려지지 않도록 원본 페이지를 고해상도로 렌더링합니다.
-  const viewport=page.getViewport({scale:4});
+  const viewport=page.getViewport({scale:6});
   const canvas=$("#pdfCanvas"),ctx=canvas.getContext("2d");
   canvas.width=viewport.width;canvas.height=viewport.height;
   await page.render({canvasContext:ctx,viewport}).promise;
@@ -415,13 +437,13 @@ function detectDateIssue(text){
 function textLinesInRegion(region){
   const [x,y,w,h]=String(region).split(",").map(Number),canvas=$("#pdfCanvas"),rows=[];
   textItems.forEach(it=>{
-    const px=it.transform[4]*4/canvas.width*100;
-    const py=100-it.transform[5]*4/canvas.height*100;
+    const px=it.transform[4]*6/canvas.width*100;
+    const py=100-it.transform[5]*6/canvas.height*100;
     if(px<x||px>x+w||py<y||py>y+h)return;
     let row=rows.find(r=>Math.abs(r.y-it.transform[5])<3);
     if(!row){row={y:it.transform[5],items:[]};rows.push(row)}row.items.push(it);
   });
-  return rows.sort((a,b)=>b.y-a.y).map(r=>r.items.sort((a,b)=>a.transform[4]-b.transform[4]).map(i=>i.str).join(" ").trim()).filter(Boolean);
+  return rows.sort((a,b)=>b.y-a.y).map(r=>joinPdfItems(r.items)).filter(Boolean);
 }
 function urlForRect(region){
   const [x,y,w,h]=String(region).split(",").map(Number);
@@ -637,7 +659,7 @@ function renderPreview(){
   $("#newsletterPreview").innerHTML=`
   <div class="news">
     <header class="news-top">
-      <div class="news-brand"><img src="data:image/png;base64,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" alt="Gmarket"><span class="news-title">${esc(title)}</span></div>
+      <div class="news-brand"><img src="${esc(clean($("#logoUrl").value)||DEFAULT_LOGO_URL)}" alt="Gmarket"><span class="news-title">${esc(title)}</span></div>
       <div class="news-issue">${esc(date)} · ${esc(no)}</div>
     </header>
     <div class="news-intro">${esc(intro)}</div>
@@ -750,7 +772,7 @@ function buildHtml(){
     const imgs=SECTIONS.map(s=>'<img src="'+esc(s.hostedImage||s.image)+'" alt="'+esc(s.title)+'" width="1000" style="display:block!important;width:100%!important;max-width:1000px!important;height:auto!important;margin:0!important">').join("");
     return '<div style="width:100%;max-width:1000px;margin:0 auto;background:#fff">'+imgs+'</div><p><br></p>';
   }
-  const logo=clean($("#logoUrl").value);
+  const logo=clean($("#logoUrl").value)||DEFAULT_LOGO_URL;
   const font="'Gmarket Sans',GmarketSans,Pretendard,Apple SD Gothic Neo,Malgun Gothic,Arial,sans-serif";
   const img=x=>esc(x.hostedImage||x.image||"");
   const br=v=>styledText(v,true);
@@ -794,14 +816,14 @@ function buildHtml(){
     </div></td>`).join("");
 
   const brandCols=brandColumnCount(DATA.brands.length),brandWidth=(100/brandCols).toFixed(4)+"%",compactBrands=brandCols===5;
-  const brandImageH=compactBrands?138:158,brandImageW=compactBrands?160:190,brandTitleSize=compactBrands?17:20,brandCopySize=compactBrands?12:13,brandMinH=compactBrands?285:315;
+  const brandImageH=compactBrands?138:158,brandImageW=compactBrands?160:190,brandTitleSize=compactBrands?17:20,brandCopySize=compactBrands?12:13,brandCardH=compactBrands?330:350;
   const brandRows=[];
   for(let i=0;i<DATA.brands.length;i+=brandCols){
     const count=Math.min(brandCols,DATA.brands.length-i);
     const row=DATA.brands.slice(i,i+brandCols).map(x=>`<td width="${brandWidth}" valign="top" style="width:${brandWidth};padding:0 ${compactBrands?"5":"7"}px 14px;box-sizing:border-box">
-      <div style="position:relative;min-height:${brandMinH}px;padding-bottom:52px;border:1px solid #222;border-radius:16px;overflow:hidden;background:#fff;box-sizing:border-box">
+      <div style="position:relative;height:${brandCardH}px;padding-bottom:52px;border:1px solid #222;border-radius:16px;overflow:hidden;background:#fff;box-sizing:border-box">
         <img src="${img(x)}" alt="" width="${brandImageW}" height="${brandImageH}" style="display:block!important;width:100%!important;max-width:${brandImageW}px!important;height:${brandImageH}px!important;margin:0 auto!important;object-fit:contain!important;background:#f6f6f6">
-        <div style="padding:${compactBrands?"11px 10px 8px":"14px 14px 8px"}"><div style="font-size:${brandTitleSize}px;line-height:1.3;font-weight:900;color:#111">${markedShort(x.name)}</div><div style="margin-top:5px;font-size:${brandCopySize}px;line-height:1.5;color:#333">${markedShort(x.copy)}</div></div>${brandCta(x.url)}
+        <div style="padding:${compactBrands?"11px 10px 8px":"14px 14px 8px"}"><div style="font-size:${brandTitleSize}px;line-height:1.3;font-weight:900;color:#111">${markedShort(x.name)}</div><div style="margin-top:5px;font-size:${brandCopySize}px;line-height:1.5;color:#333;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden">${markedShort(x.copy)}</div></div>${brandCta(x.url)}
       </div></td>`).join("");
     brandRows.push(`<tr>${row}${`<td width="${brandWidth}"></td>`.repeat(brandCols-count)}</tr>`);
   }
@@ -812,10 +834,10 @@ function buildHtml(){
       <td width="69%" valign="middle" style="width:69%;padding-left:12px;box-sizing:border-box"><div style="font-size:24px;line-height:1.35;font-weight:900;color:#111">${markedShort(x.title)}</div><div style="display:inline-block;margin-top:10px;background:#fff3a6;font-size:15px;line-height:1.5;font-weight:900;color:#111">${markedShort(x.highlight)}</div><div style="margin-top:13px;font-size:15px;line-height:1.75;color:#222">${marked(dedupe(x.body))}</div>${cta(x.url)}</td>
     </tr></table></td></tr>`).join("");
 
-  return `<div style="width:100%;max-width:1000px;margin:0 auto;background:#fff;font-family:${font};color:#111;box-sizing:border-box">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;table-layout:fixed"><tr><td style="padding:32px 38px 18px">
+  return `<div style="width:100%;max-width:1000px;margin:0 auto;background:#fff;font-family:${font};color:#111;box-sizing:border-box;border:0!important;outline:0!important;box-shadow:none!important">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border:0!important;outline:0!important;box-shadow:none!important;border-collapse:collapse;table-layout:fixed;background:#fff"><tr><td style="padding:32px 38px 18px;border:0!important;outline:0!important;box-shadow:none!important;background:#fff">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;border:1px solid #222"><tr>
-        <td valign="middle" style="padding:20px 24px"><img src="${esc(logo)}" alt="Gmarket" style="display:inline-block;width:140px;height:auto;vertical-align:middle"><span style="display:inline-block;margin-left:18px;padding:10px 14px;border:1px solid #222;background:#eef3f6;font-size:22px;font-weight:900;vertical-align:middle">${esc($("#reportTitle").value)}</span></td>
+        <td valign="middle" style="padding:20px 24px"><img src="${esc(logo)}" alt="Gmarket" width="126" style="display:inline-block;width:126px!important;max-width:126px!important;height:auto!important;vertical-align:middle;image-rendering:auto"><span style="display:inline-block;margin-left:18px;padding:10px 14px;border:1px solid #222;background:#eef3f6;font-size:22px;font-weight:900;vertical-align:middle">${esc($("#reportTitle").value)}</span></td>
         <td width="190" align="right" valign="middle" style="width:190px;padding:20px 24px;font-size:14px;font-weight:800;white-space:nowrap">${esc($("#issueDate").value)} · ${esc($("#issueNo").value)}</td>
       </tr></table>
       <div style="margin-top:14px;padding:15px 18px;background:#222;color:#fff;font-size:14px;line-height:1.5;font-weight:800">${esc($("#introText").value)}</div>
@@ -943,13 +965,14 @@ $("#loadWork").onclick=()=>{const raw=localStorage.getItem("bdNewsletterStudio")
 $("#exportImages").onclick=async()=>{const btn=$("#exportImages"),old=btn.textContent;btn.disabled=true;btn.textContent="이미지 ZIP 만드는 중...";try{await exportImageZip()}catch(err){console.error(err);$("#publishStatus").textContent="ZIP 생성 실패: "+err.message}finally{btn.disabled=false;btn.textContent=old}};
 $("#partnerSource").addEventListener("input",()=>{const count=extractPartnerImageUrls($("#partnerSource").value).length;$("#publishStatus").textContent=`이미지 주소 ${count}개 감지`});
 $("#extractImages").onclick=()=>{if(!clean($("#partnerSource").value)){$("#partnerSource").focus();$("#publishStatus").textContent="② 파트너센터 코드 보기 HTML을 붙여넣어 주세요.";return}applyPartnerImages(true)};
-$("#logoUrl").value=localStorage.getItem("bdNewsletterLogoUrl")||"";
+$("#logoUrl").value=DEFAULT_LOGO_URL;
+localStorage.setItem("bdNewsletterLogoUrl",DEFAULT_LOGO_URL);
 $("#logoUrl").addEventListener("input",()=>localStorage.setItem("bdNewsletterLogoUrl",$("#logoUrl").value));
 $("#makeHtml").onclick=()=>{
   if($("#newsletterPreview").classList.contains("hidden"))return alert("먼저 PDF를 분석해 미리보기를 만들어 주세요.");
   if(!clean($("#partnerSource").value)){$("#partnerSource").focus();$("#publishStatus").textContent="② 코드가 필요합니다. 업로드 HTML을 붙여넣어 주세요.";return}
   if(!applyPartnerImages(true))return;
-  if(!/^https?:\/\//i.test(clean($("#logoUrl").value))){$("#logoUrl").focus();$("#publishStatus").textContent="상단 G마켓 로고 이미지 주소를 입력해 주세요.";return}
+  if(!/^https?:\/\//i.test(clean($("#logoUrl").value)||DEFAULT_LOGO_URL)){$("#logoUrl").focus();$("#publishStatus").textContent="상단 G마켓 로고 이미지 주소를 확인해 주세요.";return}
   const html=buildHtml(),remaining=(html.match(/data:image\//g)||[]).length;
   if(remaining){$("#htmlResult").value="";$("#publishStatus").textContent=`base64 이미지 ${remaining}개가 남아 있어 HTML 생성을 중단했습니다.`;return}
   $("#htmlResult").value=html;$("#publishStatus").textContent=`게시용 HTML 생성 완료 · CDN 이미지 ${allContentItems().length+1}개 · base64 0개`;
