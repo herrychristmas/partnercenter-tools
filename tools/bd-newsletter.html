@@ -164,8 +164,8 @@ textarea:focus,input:focus,select:focus{border-color:#8ba5c4;box-shadow:0 0 0 3p
 <body>
 <div class="app">
   <aside class="panel">
-    <h1>BD Newsletter Studio <small class="version-badge">V3.7</small></h1>
-    <div class="sub">PDF 한 번으로 뉴스레터 구조를 읽고, 내용·이미지·링크를 점검한 뒤 파트너센터용 HTML까지 만드는 작업용 툴입니다.</div>
+    <h1>BD Newsletter Studio <small class="version-badge">V3.8</small></h1>
+    <div class="sub">PDF 한 번으로 뉴스레터 구조를 읽고, 내용·이미지·링크를 점검한 뒤 파트너센터용 HTML까지 만드는 작업용 툴입니다. V3.8은 파트너센터 표 테두리 강제 스타일과 이미지 선명도를 보정합니다.</div>
 
     <div class="section">
       <h2><span class="step-no">01</span> PDF 불러오기</h2>
@@ -335,7 +335,7 @@ function inferredIssueSnapshot(issues){
   const rows=[];
   textItems.forEach(it=>{const y=it.transform[5];let row=rows.find(r=>Math.abs(r.y-y)<3);if(!row){row={y,items:[]};rows.push(row)}row.items.push(it)});
   rows.forEach(r=>r.text=joinPdfItems(r.items));
-  const canvas=$("#pdfCanvas"),topPct=text=>{const r=rows.find(x=>squash(x.text).includes(squash(text)));return r?Math.max(0,100-(r.y*6/canvas.height*100)-.8):null};
+  const canvas=$("#pdfCanvas"),topPct=text=>{const r=rows.find(x=>squash(x.text).includes(squash(text)));return r?Math.max(0,100-(r.y*8/canvas.height*100)-.8):null};
   const start=topPct("TEAM - BD ISSUE"),end=topPct("이달의 신규 브랜드 소개");
   if(start==null||end==null||end<=start)return null;
   // V3.6: BD ISSUE는 내부 카드/텍스트를 다시 조립하지 않습니다.
@@ -357,7 +357,7 @@ function createOriginalSections(){
   const canvas=$("#pdfCanvas");
   const topPct=text=>{
     const r=rows.find(x=>squash(x.text).includes(squash(text)));
-    return r?Math.max(0,100-(r.y*6/canvas.height*100)-.8):null;
+    return r?Math.max(0,100-(r.y*8/canvas.height*100)-.8):null;
   };
   const brandY=topPct("이달의 신규 브랜드 소개");
   const trendY=topPct("트렌드 키워드를 통한 신규 셀러 입점");
@@ -403,7 +403,7 @@ async function loadPdf(file){
   pdfDoc=await pdfjsLib.getDocument({data:buf}).promise;
   const page=await pdfDoc.getPage(1);
   // 작은 PDF 크롭을 다시 확대할 때 흐려지지 않도록 원본 페이지를 고해상도로 렌더링합니다.
-  const viewport=page.getViewport({scale:6});
+  const viewport=page.getViewport({scale:8});
   const canvas=$("#pdfCanvas"),ctx=canvas.getContext("2d");
   canvas.width=viewport.width;canvas.height=viewport.height;
   await page.render({canvasContext:ctx,viewport}).promise;
@@ -437,8 +437,8 @@ function detectDateIssue(text){
 function textLinesInRegion(region){
   const [x,y,w,h]=String(region).split(",").map(Number),canvas=$("#pdfCanvas"),rows=[];
   textItems.forEach(it=>{
-    const px=it.transform[4]*6/canvas.width*100;
-    const py=100-it.transform[5]*6/canvas.height*100;
+    const px=it.transform[4]*8/canvas.width*100;
+    const py=100-it.transform[5]*8/canvas.height*100;
     if(px<x||px>x+w||py<y||py>y+h)return;
     let row=rows.find(r=>Math.abs(r.y-it.transform[5])<3);
     if(!row){row={y:it.transform[5],items:[]};rows.push(row)}row.items.push(it);
@@ -802,12 +802,12 @@ function buildHtml(){
 
   const singleIssue=DATA.issues.length===1;
   const issueCells=DATA.issues[0]?.snapshot?(()=>{
-    const x=DATA.issues[0],snapshot=`<img src="${img(x)}" alt="TEAM - BD ISSUE 원본" width="924" style="display:block!important;width:100%!important;max-width:924px!important;height:auto!important;margin:0 auto!important;background:#fff">`;
-    return `<td width="100%" valign="top" style="width:100%;padding:0 8px 16px;box-sizing:border-box">${x.url?`<a href="${esc(x.url)}" target="_blank" rel="noopener" style="display:block;text-decoration:none">${snapshot}</a>`:snapshot}</td>`;
+    const x=DATA.issues[0],snapshot=`<img src="${img(x)}" alt="TEAM - BD ISSUE 원본" width="924" style="display:block!important;width:100%!important;max-width:924px!important;height:auto!important;margin:0 auto!important;background:#fff;border:0!important;outline:0!important;box-shadow:none!important">`;
+    return `<td width="100%" valign="top" style="width:100%;padding:0 8px 16px;box-sizing:border-box;border:0!important;outline:0!important;box-shadow:none!important;background:transparent">${x.url?`<a href="${esc(x.url)}" target="_blank" rel="noopener" style="display:block;text-decoration:none">${snapshot}</a>`:snapshot}</td>`;
   })():singleIssue?(()=>{
     const x=DATA.issues[0],imageCell=`<td width="43%" valign="middle" style="width:43%;padding:8px 10px;box-sizing:border-box"><img src="${img(x)}" alt="" width="380" height="270" style="display:block!important;width:100%!important;max-width:380px!important;height:270px!important;margin:0 auto!important;object-fit:contain!important;border-radius:10px;background:#f8f8f8"></td>`,copyCell=`<td width="57%" valign="middle" style="width:57%;padding:10px 20px;box-sizing:border-box"><div style="color:#111;font-size:28px;line-height:1.32;font-weight:900;letter-spacing:-1px">${br(x.title)}</div><div style="margin-top:16px;color:#222;font-size:15px;line-height:1.75;font-weight:500">${marked(dedupe(x.body))}</div>${x.url?cta(x.url):""}</td>`;
-    return `<td width="100%" valign="top" style="width:100%;padding:0 8px 16px;box-sizing:border-box"><div style="padding:22px;border:1px solid #222;border-radius:18px;box-sizing:border-box;background:#fff"><span style="display:inline-block;margin-bottom:14px;padding:6px 10px;border:1px solid #222;background:#f7faec;font-size:12px;font-weight:900">${esc(x.kicker)}</span><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;table-layout:fixed"><tr>${x.imageSide==="left"?imageCell+copyCell:copyCell+imageCell}</tr></table></div></td>`;
-  })():DATA.issues.map(x=>`<td width="50%" valign="top" style="width:50%;padding:0 8px 16px;box-sizing:border-box">
+    return `<td width="100%" valign="top" style="width:100%;padding:0 8px 16px;box-sizing:border-box;border:0!important;outline:0!important;box-shadow:none!important;background:transparent"><div style="padding:22px;border:1px solid #222;border-radius:18px;box-sizing:border-box;background:#fff"><span style="display:inline-block;margin-bottom:14px;padding:6px 10px;border:1px solid #222;background:#f7faec;font-size:12px;font-weight:900">${esc(x.kicker)}</span><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border:0!important;outline:0!important;box-shadow:none!important;border-collapse:collapse;table-layout:fixed;background:transparent"><tr>${x.imageSide==="left"?imageCell+copyCell:copyCell+imageCell}</tr></table></div></td>`;
+  })():DATA.issues.map(x=>`<td width="50%" valign="top" style="width:50%;padding:0 8px 16px;box-sizing:border-box;border:0!important;outline:0!important;box-shadow:none!important;background:transparent">
     <div style="min-height:500px;padding:22px;border:1px solid #222;border-radius:18px;box-sizing:border-box;background:#fff">
       <span style="display:inline-block;margin-bottom:18px;padding:6px 10px;border:1px solid #222;background:#f7faec;font-size:12px;font-weight:900">${esc(x.kicker)}</span>
       <img src="${img(x)}" alt="" width="360" height="175" style="display:block!important;width:100%!important;max-width:360px!important;height:175px!important;margin:0 auto!important;object-fit:contain!important;border-radius:10px;background:#f6f6f6">
@@ -820,33 +820,33 @@ function buildHtml(){
   const brandRows=[];
   for(let i=0;i<DATA.brands.length;i+=brandCols){
     const count=Math.min(brandCols,DATA.brands.length-i);
-    const row=DATA.brands.slice(i,i+brandCols).map(x=>`<td width="${brandWidth}" valign="top" style="width:${brandWidth};padding:0 ${compactBrands?"5":"7"}px 14px;box-sizing:border-box">
+    const row=DATA.brands.slice(i,i+brandCols).map(x=>`<td width="${brandWidth}" valign="top" style="width:${brandWidth};padding:0 ${compactBrands?"5":"7"}px 14px;box-sizing:border-box;border:0!important;outline:0!important;box-shadow:none!important;background:transparent">
       <div style="position:relative;height:${brandCardH}px;padding-bottom:52px;border:1px solid #222;border-radius:16px;overflow:hidden;background:#fff;box-sizing:border-box">
         <img src="${img(x)}" alt="" width="${brandImageW}" height="${brandImageH}" style="display:block!important;width:100%!important;max-width:${brandImageW}px!important;height:${brandImageH}px!important;margin:0 auto!important;object-fit:contain!important;background:#f6f6f6">
         <div style="padding:${compactBrands?"11px 10px 8px":"14px 14px 8px"}"><div style="font-size:${brandTitleSize}px;line-height:1.3;font-weight:900;color:#111">${markedShort(x.name)}</div><div style="margin-top:5px;font-size:${brandCopySize}px;line-height:1.5;color:#333;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden">${markedShort(x.copy)}</div></div>${brandCta(x.url)}
       </div></td>`).join("");
-    brandRows.push(`<tr>${row}${`<td width="${brandWidth}"></td>`.repeat(brandCols-count)}</tr>`);
+    brandRows.push(`<tr>${row}${`<td width="${brandWidth}" style="border:0!important;outline:0!important;box-shadow:none!important;background:transparent"></td>`.repeat(brandCols-count)}</tr>`);
   }
 
-  const trendRows=DATA.trends.map(x=>`<tr><td style="padding:26px 24px;border-bottom:1px dashed #bbb">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;table-layout:fixed"><tr>
-      <td width="31%" valign="middle" style="width:31%;padding:0 30px 0 6px;box-sizing:border-box"><img src="${img(x)}" alt="" width="220" height="160" style="display:block!important;width:220px!important;max-width:100%!important;height:160px!important;margin:0 auto!important;object-fit:contain!important;border-radius:10px;background:#f6f6f6"></td>
-      <td width="69%" valign="middle" style="width:69%;padding-left:12px;box-sizing:border-box"><div style="font-size:24px;line-height:1.35;font-weight:900;color:#111">${markedShort(x.title)}</div><div style="display:inline-block;margin-top:10px;background:#fff3a6;font-size:15px;line-height:1.5;font-weight:900;color:#111">${markedShort(x.highlight)}</div><div style="margin-top:13px;font-size:15px;line-height:1.75;color:#222">${marked(dedupe(x.body))}</div>${cta(x.url)}</td>
+  const trendRows=DATA.trends.map(x=>`<tr><td style="padding:26px 24px;border:0!important;outline:0!important;box-shadow:none!important;background:#fff">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border:0!important;outline:0!important;box-shadow:none!important;border-collapse:collapse;table-layout:fixed;background:transparent"><tr>
+      <td width="31%" valign="middle" style="width:31%;padding:0 30px 0 6px;box-sizing:border-box;border:0!important;outline:0!important;box-shadow:none!important;background:transparent"><img src="${img(x)}" alt="" width="220" height="160" style="display:block!important;width:220px!important;max-width:100%!important;height:160px!important;margin:0 auto!important;object-fit:contain!important;border-radius:10px;background:#f6f6f6"></td>
+      <td width="69%" valign="middle" style="width:69%;padding-left:12px;box-sizing:border-box;border:0!important;outline:0!important;box-shadow:none!important;background:transparent"><div style="font-size:24px;line-height:1.35;font-weight:900;color:#111">${markedShort(x.title)}</div><div style="display:inline-block;margin-top:10px;background:#fff3a6;font-size:15px;line-height:1.5;font-weight:900;color:#111">${markedShort(x.highlight)}</div><div style="margin-top:13px;font-size:15px;line-height:1.75;color:#222">${marked(dedupe(x.body))}</div>${cta(x.url)}</td>
     </tr></table></td></tr>`).join("");
 
   return `<div style="width:100%;max-width:1000px;margin:0 auto;background:#fff;font-family:${font};color:#111;box-sizing:border-box;border:0!important;outline:0!important;box-shadow:none!important">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border:0!important;outline:0!important;box-shadow:none!important;border-collapse:collapse;table-layout:fixed;background:#fff"><tr><td style="padding:32px 38px 18px;border:0!important;outline:0!important;box-shadow:none!important;background:#fff">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;border:1px solid #222"><tr>
-        <td valign="middle" style="padding:20px 24px"><img src="${esc(logo)}" alt="Gmarket" width="126" style="display:inline-block;width:126px!important;max-width:126px!important;height:auto!important;vertical-align:middle;image-rendering:auto"><span style="display:inline-block;margin-left:18px;padding:10px 14px;border:1px solid #222;background:#eef3f6;font-size:22px;font-weight:900;vertical-align:middle">${esc($("#reportTitle").value)}</span></td>
-        <td width="190" align="right" valign="middle" style="width:190px;padding:20px 24px;font-size:14px;font-weight:800;white-space:nowrap">${esc($("#issueDate").value)} · ${esc($("#issueNo").value)}</td>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border:0!important;outline:0!important;box-shadow:none!important;border-collapse:collapse;table-layout:fixed;background:#fff"><tr>
+        <td valign="middle" style="padding:20px 24px;border:0!important;outline:0!important;box-shadow:none!important"><img src="${esc(logo)}" alt="Gmarket" width="132" style="display:inline-block!important;width:132px!important;max-width:132px!important;height:auto!important;vertical-align:middle;border:0!important;outline:0!important;box-shadow:none!important;image-rendering:-webkit-optimize-contrast"><span style="display:inline-block;margin-left:18px;padding:10px 14px;border:1px solid #222;background:#eef3f6;font-size:22px;font-weight:900;vertical-align:middle">${esc($("#reportTitle").value)}</span></td>
+        <td width="190" align="right" valign="middle" style="width:190px;padding:20px 24px;border:0!important;outline:0!important;box-shadow:none!important;font-size:14px;font-weight:800;white-space:nowrap">${esc($("#issueDate").value)} · ${esc($("#issueNo").value)}</td>
       </tr></table>
       <div style="margin-top:14px;padding:15px 18px;background:#222;color:#fff;font-size:14px;line-height:1.5;font-weight:800">${esc($("#introText").value)}</div>
       ${DATA.issues[0]?.snapshot&&DATA.issues[0]?.includesHeader?"":'<div style="padding:34px 0 14px;font-size:34px;line-height:1.2;font-weight:900">✦ TEAM - BD ISSUE</div><div style="margin-bottom:14px;font-size:14px;font-weight:700;color:#555">BD팀의 신규 입점 브랜드 중 이슈 상품을 소개합니다.</div>'}
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;table-layout:fixed"><tr>${issueCells}</tr></table>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border:0!important;outline:0!important;box-shadow:none!important;border-collapse:collapse;table-layout:fixed;background:transparent"><tr>${issueCells}</tr></table>
       <div style="padding:34px 0 14px;font-size:30px;line-height:1.25;font-weight:900">✦ 이달의 신규 브랜드 소개</div><div style="margin-bottom:14px;font-size:14px;font-weight:700;color:#555">새롭게 입점한 브랜드를 한눈에 만나보세요.</div>
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;table-layout:fixed">${brandRows.join("")}</table>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border:0!important;outline:0!important;box-shadow:none!important;border-collapse:collapse;table-layout:fixed;background:transparent">${brandRows.join("")}</table>
       <div style="padding:34px 0 14px;font-size:30px;line-height:1.25;font-weight:900">✦ 트렌드 키워드를 통한 신규 셀러 입점</div><div style="margin-bottom:14px;font-size:14px;font-weight:700;color:#555">트렌드 키워드를 담은 신규 셀러! G마켓에서 만나보세요.</div>
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;border:1px solid #222;border-radius:18px;overflow:hidden">${trendRows}</table>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border:0!important;outline:0!important;box-shadow:none!important;border-collapse:collapse;table-layout:fixed;background:#fff">${trendRows}</table>
     </td></tr></table>
   </div><p><br></p>`;
 }
@@ -891,7 +891,7 @@ async function normalizedImageBlob(src,index){
   const type=index<issueCount?"issue":index<issueCount+brandCount?"brand":"trend";
   if(type==="issue"&&DATA.issues[index]?.snapshot)return await (await fetch(src)).blob();
   // 실제 표시 크기의 2배로 저장해 고해상도 화면과 Imweb 리사이징에서도 선명도를 유지합니다.
-  const size=type==="issue"?[1440,700]:type==="brand"?[760,632]:[880,640];
+  const size=type==="issue"?[2400,1200]:type==="brand"?[1200,1000]:[1320,960];
   const image=await new Promise((resolve,reject)=>{const im=new Image();im.onload=()=>resolve(im);im.onerror=reject;im.src=src});
   const canvas=document.createElement("canvas"),ctx=canvas.getContext("2d");
   canvas.width=size[0];canvas.height=size[1];
