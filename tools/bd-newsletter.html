@@ -164,8 +164,8 @@ textarea:focus,input:focus,select:focus{border-color:#8ba5c4;box-shadow:0 0 0 3p
 <body>
 <div class="app">
   <aside class="panel">
-    <h1>BD Newsletter Studio <small class="version-badge">V3.8</small></h1>
-    <div class="sub">PDF 한 번으로 뉴스레터 구조를 읽고, 내용·이미지·링크를 점검한 뒤 파트너센터용 HTML까지 만드는 작업용 툴입니다. V3.8은 파트너센터 표 테두리 강제 스타일과 이미지 선명도를 보정합니다.</div>
+    <h1>BD Newsletter Studio <small class="version-badge">V3.9</small></h1>
+    <div class="sub">PDF 한 번으로 뉴스레터 구조를 읽고, 내용·이미지·링크를 점검한 뒤 파트너센터용 HTML까지 만드는 작업용 툴입니다. V3.9은 파트너센터 표 테두리 강제 스타일과 이미지 선명도를 보정합니다.</div>
 
     <div class="section">
       <h2><span class="step-no">01</span> PDF 불러오기</h2>
@@ -828,7 +828,7 @@ function buildHtml(){
     brandRows.push(`<tr>${row}${`<td width="${brandWidth}" style="border:0!important;outline:0!important;box-shadow:none!important;background:transparent"></td>`.repeat(brandCols-count)}</tr>`);
   }
 
-  const trendRows=DATA.trends.map(x=>`<tr><td style="padding:26px 24px;border:0!important;outline:0!important;box-shadow:none!important;background:#fff">
+  const trendRows=DATA.trends.map((x,idx)=>`<tr><td style="padding:26px 24px;${idx<DATA.trends.length-1?'border-bottom:1px dashed #bbb!important;':'border-bottom:0!important;'}outline:0!important;box-shadow:none!important;background:#fff">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border:0!important;outline:0!important;box-shadow:none!important;border-collapse:collapse;table-layout:fixed;background:transparent"><tr>
       <td width="31%" valign="middle" style="width:31%;padding:0 30px 0 6px;box-sizing:border-box;border:0!important;outline:0!important;box-shadow:none!important;background:transparent"><img src="${img(x)}" alt="" width="220" height="160" style="display:block!important;width:220px!important;max-width:100%!important;height:160px!important;margin:0 auto!important;object-fit:contain!important;border-radius:10px;background:#f6f6f6"></td>
       <td width="69%" valign="middle" style="width:69%;padding-left:12px;box-sizing:border-box;border:0!important;outline:0!important;box-shadow:none!important;background:transparent"><div style="font-size:24px;line-height:1.35;font-weight:900;color:#111">${markedShort(x.title)}</div><div style="display:inline-block;margin-top:10px;background:#fff3a6;font-size:15px;line-height:1.5;font-weight:900;color:#111">${markedShort(x.highlight)}</div><div style="margin-top:13px;font-size:15px;line-height:1.75;color:#222">${marked(dedupe(x.body))}</div>${cta(x.url)}</td>
@@ -836,7 +836,7 @@ function buildHtml(){
 
   return `<div style="width:100%;max-width:1000px;margin:0 auto;background:#fff;font-family:${font};color:#111;box-sizing:border-box;border:0!important;outline:0!important;box-shadow:none!important">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border:0!important;outline:0!important;box-shadow:none!important;border-collapse:collapse;table-layout:fixed;background:#fff"><tr><td style="padding:32px 38px 18px;border:0!important;outline:0!important;box-shadow:none!important;background:#fff">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border:0!important;outline:0!important;box-shadow:none!important;border-collapse:collapse;table-layout:fixed;background:#fff"><tr>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border:1px solid #222!important;outline:0!important;box-shadow:none!important;border-collapse:collapse;table-layout:fixed;background:#fff"><tr>
         <td valign="middle" style="padding:20px 24px;border:0!important;outline:0!important;box-shadow:none!important"><img src="${esc(logo)}" alt="Gmarket" width="132" style="display:inline-block!important;width:132px!important;max-width:132px!important;height:auto!important;vertical-align:middle;border:0!important;outline:0!important;box-shadow:none!important;image-rendering:-webkit-optimize-contrast"><span style="display:inline-block;margin-left:18px;padding:10px 14px;border:1px solid #222;background:#eef3f6;font-size:22px;font-weight:900;vertical-align:middle">${esc($("#reportTitle").value)}</span></td>
         <td width="190" align="right" valign="middle" style="width:190px;padding:20px 24px;border:0!important;outline:0!important;box-shadow:none!important;font-size:14px;font-weight:800;white-space:nowrap">${esc($("#issueDate").value)} · ${esc($("#issueNo").value)}</td>
       </tr></table>
@@ -846,7 +846,7 @@ function buildHtml(){
       <div style="padding:34px 0 14px;font-size:30px;line-height:1.25;font-weight:900">✦ 이달의 신규 브랜드 소개</div><div style="margin-bottom:14px;font-size:14px;font-weight:700;color:#555">새롭게 입점한 브랜드를 한눈에 만나보세요.</div>
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border:0!important;outline:0!important;box-shadow:none!important;border-collapse:collapse;table-layout:fixed;background:transparent">${brandRows.join("")}</table>
       <div style="padding:34px 0 14px;font-size:30px;line-height:1.25;font-weight:900">✦ 트렌드 키워드를 통한 신규 셀러 입점</div><div style="margin-bottom:14px;font-size:14px;font-weight:700;color:#555">트렌드 키워드를 담은 신규 셀러! G마켓에서 만나보세요.</div>
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border:0!important;outline:0!important;box-shadow:none!important;border-collapse:collapse;table-layout:fixed;background:#fff">${trendRows}</table>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border:1px solid #222!important;outline:0!important;box-shadow:none!important;border-collapse:separate;border-spacing:0;table-layout:fixed;background:#fff;border-radius:18px;overflow:hidden">${trendRows}</table>
     </td></tr></table>
   </div><p><br></p>`;
 }
