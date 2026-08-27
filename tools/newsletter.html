@@ -27,6 +27,7 @@
     textarea{width:100%;min-height:250px;padding:15px;border:1px solid #d0d5dd;border-radius:14px;resize:vertical;background:#fff;color:#172033;font:12.5px/1.65 Consolas,Monaco,monospace;outline:none}
     textarea:focus,input:focus{border-color:var(--brand);box-shadow:0 0 0 4px rgba(40,144,255,.1)}
     .thumb-box{margin-top:16px;padding:16px;border:1px solid #cfe4ff;border-radius:15px;background:#f5faff}.thumb-box label{display:block;font-weight:850;font-size:14px;margin-bottom:6px}
+    .tracking-box{margin-top:16px;padding:16px;border:1px solid #d9e7f7;border-radius:15px;background:#fbfdff}.tracking-box .tracking-title{font-weight:850;font-size:14px;margin-bottom:6px}.tracking-box p{margin:0 0 12px;color:var(--muted);font-size:12px;line-height:1.6}.tracking-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.tracking-grid .full{grid-column:1/-1}.tracking-box input{width:100%;padding:11px 12px;border:1px solid #d0d5dd;border-radius:10px;font-size:12px;outline:none;background:#fff}.map-area{margin-top:14px}.map-area textarea{min-height:150px;background:#fff}.map-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
     .thumb-box p{margin:0 0 10px;color:var(--muted);font-size:12px;line-height:1.6}.thumb-box textarea{min-height:145px;background:#fff}
     .counter{margin-top:8px;font-size:12px;font-weight:800;color:#475467}
     .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}.btn{border:0;border-radius:11px;padding:12px 15px;font-weight:850;font-size:13px}
@@ -37,14 +38,14 @@
     .preview-frame{display:block;width:100%;height:650px;border:0;background:#fff;border-radius:12px}.preview{padding:12px;max-height:none;overflow:hidden}
     .result-area{margin-top:20px}.result-area textarea{min-height:310px;background:#fbfcff}
     details{margin-top:16px;border:1px solid var(--line);border-radius:14px;background:#fff}details summary{list-style:none;padding:15px 16px;font-size:13px;font-weight:850;cursor:pointer}.detail-body{padding:0 16px 16px}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.field label{display:block;margin-bottom:7px;font-size:12px;font-weight:800;color:#475467}.field input{width:100%;padding:11px 12px;border:1px solid #d0d5dd;border-radius:10px;font-size:12px;outline:none}.helper{margin-top:8px;color:var(--muted);font-size:11px;line-height:1.6}.footer{margin-top:22px;text-align:center;color:#98a2b3;font-size:11px}
-    @media(max-width:940px){.layout{grid-template-columns:1fr}.hero{align-items:flex-start}}@media(max-width:640px){.app{padding:26px 15px 50px}.hero{display:block}.version{display:inline-flex;margin-top:15px}.status-grid,.form-grid{grid-template-columns:1fr}.actions .btn{flex:1}}
+    @media(max-width:940px){.layout{grid-template-columns:1fr}.hero{align-items:flex-start}}@media(max-width:640px){.app{padding:26px 15px 50px}.hero{display:block}.version{display:inline-flex;margin-top:15px}.status-grid,.form-grid,.tracking-grid{grid-template-columns:1fr}.tracking-grid .full{grid-column:auto}.actions .btn{flex:1}}
   </style>
 </head>
 <body>
 <main class="app">
   <header class="hero">
     <div><div class="eyebrow">SELLLOG WORK TOOL</div><h1>뉴스레터 자동 생성기</h1><p>DM HTML과 파트너센터용 표지 이미지 주소를 넣으면<br>캐러셀 HTML을 자동으로 생성합니다.</p></div>
-    <div class="version">v2.2</div>
+    <div class="version">v2.3 TRACKING</div>
   </header>
   <section class="layout">
     <div>
@@ -60,6 +61,22 @@
             <p>DM HTML의 맨 앞 표지만 아래 주소로 교체합니다. 나머지 콘텐츠 이미지와 링크는 그대로 유지됩니다.</p>
             <input id="thumbnailUrls" type="url" placeholder="https://.../partnercenter-cover.png" style="width:100%;padding:13px 14px;border:1px solid #d0d5dd;border-radius:12px;outline:none;background:#fff;">
             <div class="counter" id="thumbCount">표지 주소 미입력</div>
+          </div>
+
+          <div class="tracking-box">
+            <div class="tracking-title">뉴스레터 클릭 트래킹</div>
+            <p>토큰 없이 로컬에서 추적 링크와 <strong>link_map</strong> 등록용 데이터를 함께 만듭니다. 생성 후 link_map 데이터만 Google Sheet에 붙여넣으면 됩니다.</p>
+            <div class="tracking-grid">
+              <div class="field"><label>Campaign</label><input id="trackingCampaign" placeholder="예: 2609_newsletter"></div>
+              <div class="field"><label>Source</label><input id="trackingSource" value="all" placeholder="예: all / email / partner"></div>
+              <div class="field full"><label>Apps Script 추적 URL</label><input id="trackingBaseUrl" placeholder="https://script.google.com/.../exec"></div>
+            </div>
+            <div class="map-area">
+              <div class="field"><label>link_map 등록 데이터</label><textarea id="linkMapOutput" readonly placeholder="자동 생성 후 link_map 시트에 붙여넣을 데이터가 표시됩니다."></textarea></div>
+              <div class="map-actions">
+                <button class="btn btn-outline" id="copyMapBtn" disabled>link_map 복사</button>
+              </div>
+            </div>
           </div>
 
           <div class="actions"><button class="btn btn-primary" id="generateBtn">자동 생성</button><button class="btn btn-soft" id="clearBtn">전체 비우기</button></div>
@@ -93,9 +110,9 @@
   <div class="footer">SELLLOG Newsletter Generator · Local browser processing</div>
 </main>
 <script>
-const DEFAULTS={channelImage:'https://cdn.imweb.me/thumbnail/20260623/ff2cef5d8c570.png',surveyImage:'http://image.gmarket.co.kr/Gmkt_Event/2026/07/2607_ebayedu_DM/2607_newsletter_DM_m_16.jpg',surveyLink:'https://m.site.naver.com/23idP',surveyTitle:'설문참여'};
+const DEFAULTS={channelImage:'https://cdn.imweb.me/thumbnail/20260623/ff2cef5d8c570.png',surveyImage:'http://image.gmarket.co.kr/Gmkt_Event/2026/07/2607_ebayedu_DM/2607_newsletter_DM_m_16.jpg',surveyLink:'https://m.site.naver.com/23idP',surveyTitle:'설문참여',trackingBaseUrl:'https://script.google.com/a/macros/gmarket.com/s/AKfycbxizIVm9E0ZpgDHzpBvm3CsPw0nOg0rdjObWt-LDwVXm9K8Wjo52FY1l7kFva4B-adXoA/exec',trackingSource:'all'};
 const $=id=>document.getElementById(id);
-const els={dropzone:$('dropzone'),fileInput:$('fileInput'),sourceHtml:$('sourceHtml'),thumbnailUrls:$('thumbnailUrls'),thumbCount:$('thumbCount'),resultHtml:$('resultHtml'),preview:$('preview'),message:$('message'),contentCount:$('contentCount'),imageCount:$('imageCount'),checkState:$('checkState'),fileNameLabel:$('fileNameLabel'),copyBtn:$('copyBtn'),downloadBtn:$('downloadBtn'),channelImage:$('channelImage'),surveyImage:$('surveyImage'),surveyLink:$('surveyLink'),surveyTitle:$('surveyTitle')};
+const els={dropzone:$('dropzone'),fileInput:$('fileInput'),sourceHtml:$('sourceHtml'),thumbnailUrls:$('thumbnailUrls'),thumbCount:$('thumbCount'),resultHtml:$('resultHtml'),preview:$('preview'),message:$('message'),contentCount:$('contentCount'),imageCount:$('imageCount'),checkState:$('checkState'),fileNameLabel:$('fileNameLabel'),copyBtn:$('copyBtn'),downloadBtn:$('downloadBtn'),channelImage:$('channelImage'),surveyImage:$('surveyImage'),surveyLink:$('surveyLink'),surveyTitle:$('surveyTitle'),trackingCampaign:$('trackingCampaign'),trackingSource:$('trackingSource'),trackingBaseUrl:$('trackingBaseUrl'),linkMapOutput:$('linkMapOutput'),copyMapBtn:$('copyMapBtn')};
 let currentFileName='';
 function esc(v){return String(v||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
 function normalize(v){return String(v||'').replace(/\s+/g,' ').trim()}
@@ -126,6 +143,50 @@ function render(resultHtml){
   els.preview.innerHTML='';
   els.preview.appendChild(frame);
 }
+
+function slug(v){
+  return String(v||'')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g,'_')
+    .replace(/^_+|_+$/g,'')
+    .replace(/_+/g,'_')
+    .slice(0,60);
+}
+function makeTracking(resultHtml){
+  const campaign=slug(els.trackingCampaign.value);
+  const source=slug(els.trackingSource.value)||'all';
+  const base=els.trackingBaseUrl.value.trim().replace(/\?+$/,'');
+  if(!campaign||!/^https:\/\/script\.google\.com\//i.test(base)){
+    return {html:resultHtml,mapRows:[],tracked:false};
+  }
+  const doc=new DOMParser().parseFromString(`<div id="tracking-root">${resultHtml}</div>`,'text/html');
+  const root=doc.getElementById('tracking-root');
+  const anchors=[...root.querySelectorAll('a[href]')];
+  const rows=[];
+  anchors.forEach((a,idx)=>{
+    const original=(a.getAttribute('href')||'').trim();
+    if(!/^https?:\/\//i.test(original))return;
+    const seq=String(idx+1).padStart(2,'0');
+    const cta=`cta_${seq}`;
+    const linkId=`${campaign}_${cta}`;
+    rows.push({link_id:linkId,campaign,cta,destination:original,active:'TRUE'});
+    a.setAttribute('href',`${base}?id=${encodeURIComponent(linkId)}&source=${encodeURIComponent(source)}`);
+  });
+  return {html:root.innerHTML,mapRows:rows,tracked:rows.length>0};
+}
+function mapTsv(rows){
+  if(!rows.length)return '';
+  return rows.map(r=>[r.link_id,r.campaign,r.cta,r.destination,r.active].join('\t')).join('\n');
+}
+async function copyMap(){
+  const v=els.linkMapOutput.value;
+  if(!v)return;
+  try{await navigator.clipboard.writeText(v)}
+  catch(e){els.linkMapOutput.select();document.execCommand('copy')}
+  show('good','link_map 등록 데이터를 복사했습니다. Google Sheet의 A2 셀에 붙여넣으세요.');
+}
+
 function generate(){
   const source=els.sourceHtml.value.trim(),newCover=coverUrl();
   if(!source){show('bad','DM HTML을 먼저 넣어 주세요.');setMetrics(0,newCover?1:0,'오류','bad');return}
@@ -137,22 +198,33 @@ function generate(){
   let out=`<div class="sellog-carousel-post" data-color="#00C853">\n\n<div><img src="${esc(newCover)}" class="fr-fic fr-dii">${channelBlock()}</div>`;
   groups.forEach((g,i)=>out+=`\n${contentBlock(i+1,g,'')}`);
   out+=`\n<div data-title="${esc(els.surveyTitle.value.trim()||'설문참여')}"><a href="${esc(els.surveyLink.value.trim())}" target="_blank"><img src="${esc(els.surveyImage.value.trim())}" class="fr-fic fr-dii"></a></div></div>\n\n<p><br></p>\n<p><br></p>\n<p><br></p>`;
+
+  const tracked=makeTracking(out);
+  out=tracked.html;
+  els.linkMapOutput.value=mapTsv(tracked.mapRows);
+  els.copyMapBtn.disabled=!tracked.mapRows.length;
+
   els.resultHtml.value=out;els.copyBtn.disabled=false;els.downloadBtn.disabled=false;render(out);
-  show('good',`맨 앞 표지만 새 주소로 교체했습니다.<br>콘텐츠 ${groups.length}개 이미지와 링크는 DM HTML 내용을 그대로 사용했습니다.`);
+
+  if(tracked.tracked){
+    show('good',`맨 앞 표지만 새 주소로 교체했습니다.<br>콘텐츠 ${groups.length}개를 생성했고, CTA ${tracked.mapRows.length}개에 추적 링크를 적용했습니다.<br><strong>link_map 데이터는 Google Sheet A2에 붙여넣으면 됩니다.</strong>`);
+  }else{
+    show('warn',`HTML은 생성했지만 트래킹은 적용하지 않았습니다.<br>Campaign과 Apps Script 추적 URL을 확인해 주세요.`);
+  }
   setMetrics(groups.length,1,'정상','good');
 }
 async function readFile(file){if(!file)return;const text=await file.text();els.sourceHtml.value=text;currentFileName=file.name;els.fileNameLabel.textContent=file.name;show('good',file.name+' 파일을 불러왔습니다.')}
 async function copy(){try{await navigator.clipboard.writeText(els.resultHtml.value)}catch(e){els.resultHtml.select();document.execCommand('copy')}show('good','완성된 HTML 전체를 복사했습니다.')}
 function download(){const blob=new Blob([els.resultHtml.value],{type:'text/html;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='sellog_partnercenter.html';a.click();URL.revokeObjectURL(url)}
-function clearAll(){els.sourceHtml.value='';els.thumbnailUrls.value='';els.resultHtml.value='';els.preview.innerHTML='<div class="empty">DM HTML과 표지 주소를 넣은 뒤<br><strong>자동 생성</strong>을 눌러주세요.</div>';els.fileNameLabel.textContent='파일 없음';els.copyBtn.disabled=true;els.downloadBtn.disabled=true;els.thumbCount.textContent='표지 주소 미입력';setMetrics(0,0,'대기');els.message.className='message'}
-function loadSettings(){const s=JSON.parse(localStorage.getItem('sellogSettings')||'{}');Object.keys(DEFAULTS).forEach(k=>els[k].value=s[k]||DEFAULTS[k])}
-function saveSettings(){const s={};Object.keys(DEFAULTS).forEach(k=>s[k]=els[k].value.trim());localStorage.setItem('sellogSettings',JSON.stringify(s));show('good','고정 영역 설정을 저장했습니다.')}
-function resetSettings(){Object.keys(DEFAULTS).forEach(k=>els[k].value=DEFAULTS[k]);localStorage.removeItem('sellogSettings');show('good','기본 설정으로 복원했습니다.')}
+function clearAll(){els.sourceHtml.value='';els.thumbnailUrls.value='';els.resultHtml.value='';els.linkMapOutput.value='';els.preview.innerHTML='<div class="empty">DM HTML과 표지 주소를 넣은 뒤<br><strong>자동 생성</strong>을 눌러주세요.</div>';els.fileNameLabel.textContent='파일 없음';els.copyBtn.disabled=true;els.downloadBtn.disabled=true;els.copyMapBtn.disabled=true;els.thumbCount.textContent='표지 주소 미입력';setMetrics(0,0,'대기');els.message.className='message'}
+function loadSettings(){const s=JSON.parse(localStorage.getItem('sellogSettings')||'{}');Object.keys(DEFAULTS).forEach(k=>els[k].value=s[k]||DEFAULTS[k]);els.trackingCampaign.value=localStorage.getItem('sellogCampaign')||''}
+function saveSettings(){const s={};Object.keys(DEFAULTS).forEach(k=>s[k]=els[k].value.trim());localStorage.setItem('sellogSettings',JSON.stringify(s));localStorage.setItem('sellogCampaign',els.trackingCampaign.value.trim());show('good','고정 영역과 트래킹 설정을 저장했습니다.')}
+function resetSettings(){Object.keys(DEFAULTS).forEach(k=>els[k].value=DEFAULTS[k]);els.trackingCampaign.value='';localStorage.removeItem('sellogSettings');localStorage.removeItem('sellogCampaign');show('good','기본 설정으로 복원했습니다.')}
 els.thumbnailUrls.addEventListener('input',()=>els.thumbCount.textContent=coverUrl()?'표지 주소 입력 완료':'표지 주소 미입력');
 ['dragenter','dragover'].forEach(n=>els.dropzone.addEventListener(n,e=>{e.preventDefault();els.dropzone.classList.add('drag')}));
 ['dragleave','drop'].forEach(n=>els.dropzone.addEventListener(n,e=>{e.preventDefault();els.dropzone.classList.remove('drag')}));
 els.dropzone.addEventListener('drop',e=>readFile(e.dataTransfer.files[0]));els.fileInput.addEventListener('change',e=>readFile(e.target.files[0]));
-$('generateBtn').onclick=generate;$('clearBtn').onclick=clearAll;$('copyBtn').onclick=copy;$('downloadBtn').onclick=download;$('saveSettingsBtn').onclick=saveSettings;$('resetSettingsBtn').onclick=resetSettings;
+$('generateBtn').onclick=generate;$('clearBtn').onclick=clearAll;$('copyBtn').onclick=copy;$('downloadBtn').onclick=download;$('copyMapBtn').onclick=copyMap;$('saveSettingsBtn').onclick=saveSettings;$('resetSettingsBtn').onclick=resetSettings;
 loadSettings();setMetrics(0,0,'대기');
 </script>
 </body>
