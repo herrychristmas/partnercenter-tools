@@ -513,7 +513,7 @@
       </p>
     </div>
 
-    <div class="version">v2.5</div>
+    <div class="version">v2.3 ROLLBACK</div>
   </header>
 
   <section class="layout">
@@ -612,13 +612,6 @@
             <div class="detail-body">
 
               <div class="form-grid">
-
-                <div class="field">
-                  <label>
-                    고정 채널 이미지 주소
-                  </label>
-                  <input id="channelImage">
-                </div>
 
                 <div class="field">
                   <label>
@@ -822,8 +815,6 @@
 <script>
 
 const DEFAULTS = {
-  channelImage:
-    'https://cdn.imweb.me/thumbnail/20260623/ff2cef5d8c570.png',
 
   surveyImage:
     'http://image.gmarket.co.kr/Gmkt_Event/2026/07/2607_ebayedu_DM/2607_newsletter_DM_m_16.jpg',
@@ -881,9 +872,6 @@ const els = {
 
   downloadBtn:
     $('downloadBtn'),
-
-  channelImage:
-    $('channelImage'),
 
   surveyImage:
     $('surveyImage'),
@@ -954,80 +942,6 @@ function coverUrl(){
 }
 
 
-function assetKey(url){
-
-  return String(url || '')
-    .trim()
-    .replace(/^https?:/i,'')
-    .split(/[?#]/)[0]
-    .replace(/\/+$/,'');
-
-}
-
-function channelBlock(){
-
-  return `
-<div
-  class="sellog-fixed-channel"
-  style="
-    position:relative;
-    width:100%;
-    max-width:700px;
-    margin:0 auto;
-  "
->
-  <img
-    src="${esc(els.channelImage.value.trim())}"
-    class="fr-fic fr-dii"
-  >
-
-  <a
-    href="https://www.youtube.com/@gmarket_edu"
-    target="_blank"
-    aria-label="판매자 교육센터 유튜브"
-    style="
-      position:absolute;
-      left:0;
-      top:0;
-      width:33.33%;
-      height:100%;
-      display:block;
-      z-index:2;
-    "
-  ></a>
-
-  <a
-    href="https://pf.kakao.com/_xdxnxbSb"
-    target="_blank"
-    aria-label="지마켓 비즈니스 카카오톡 채널"
-    style="
-      position:absolute;
-      left:33.33%;
-      top:0;
-      width:33.33%;
-      height:100%;
-      display:block;
-      z-index:2;
-    "
-  ></a>
-
-  <a
-    href="https://partner.gmarket.com/"
-    target="_blank"
-    aria-label="G마켓 파트너센터"
-    style="
-      position:absolute;
-      left:66.66%;
-      top:0;
-      width:33.34%;
-      height:100%;
-      display:block;
-      z-index:2;
-    "
-  ></a>
-</div>`;
-
-}
 
 function parseSource(html){
 
@@ -1362,13 +1276,7 @@ function generate(){
     나머지 이미지는
     원본 DM 순서와 링크 그대로 유지
   */
-
-  const channelKey =
-    assetKey(
-      els.channelImage.value.trim()
-    );
-
-  const body =
+const body =
     monthly.filter(
       (x,i) => {
 
@@ -1379,13 +1287,6 @@ function generate(){
         if(
           survey
           && x.src === survey.src
-        ){
-          return false;
-        }
-
-        if(
-          channelKey
-          && assetKey(x.src) === channelKey
         ){
           return false;
         }
@@ -1422,9 +1323,7 @@ function generate(){
     src="${esc(newCover)}"
     class="fr-fic fr-dii"
   >
-</div>
-
-${channelBlock()}`;
+</div>`;
 
   groups.forEach(
     (group,i) => {
@@ -1485,10 +1384,9 @@ ${channelBlock()}`;
 
   show(
     'good',
-    `맨 앞 표지만 입력한 주소로 교체했습니다.<br>
-    그 아래 채널 영역은 고정 이미지 + 고정 링크 3개로 적용했습니다.<br>
-    DM 안의 동일 채널 이미지는 자동 제외해 중복 노출을 막았습니다.<br>
-    마지막 설문은 고정 설정값으로 적용했습니다.`
+    `맨 앞 표지만 새 주소로 교체했습니다.<br>
+    채널 영역과 콘텐츠 이미지는 DM HTML 순서를 그대로 사용했습니다.<br>
+    마지막 설문만 고정 설정값으로 적용했습니다.`
   );
 
   setMetrics(
