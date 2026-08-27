@@ -513,7 +513,7 @@
       </p>
     </div>
 
-    <div class="version">v2.3</div>
+    <div class="version">v2.4</div>
   </header>
 
   <section class="layout">
@@ -566,7 +566,7 @@
 
             <p>
               DM HTML의 맨 앞 표지만 아래 주소로 교체합니다.
-              채널 영역과 나머지 콘텐츠 이미지·링크는 원본 DM HTML을 그대로 사용합니다.
+              표지의 기존 링크·이미지맵과 채널 영역, 나머지 콘텐츠 링크는 그대로 보존합니다.
             </p>
 
             <input
@@ -929,6 +929,153 @@ function linkOf(img){
 
 }
 
+
+function mapOf(img, doc){
+
+  const usemap =
+    (img.getAttribute('usemap') || '')
+      .trim();
+
+  if(!usemap){
+    return null;
+  }
+
+  const name =
+    usemap.replace(/^#/,'').trim();
+
+  if(!name){
+    return null;
+  }
+
+  const maps =
+    Array.from(
+      doc.querySelectorAll('map')
+    );
+
+  const map =
+    maps.find(
+      el =>
+        (el.getAttribute('name') || '').trim() === name
+        ||
+        (el.getAttribute('id') || '').trim() === name
+    );
+
+  if(!map){
+    return null;
+  }
+
+  const areas =
+    Array.from(
+      map.querySelectorAll('area[href]')
+    )
+      .map(area => ({
+        href:
+          (area.getAttribute('href') || '').trim(),
+
+        shape:
+          (area.getAttribute('shape') || 'rect').trim(),
+
+        coords:
+          (area.getAttribute('coords') || '').trim(),
+
+        alt:
+          normalize(
+            area.getAttribute('alt')
+            || area.getAttribute('title')
+          ),
+
+        target:
+          (area.getAttribute('target') || '_blank').trim()
+      }))
+      .filter(area => area.href);
+
+  if(!areas.length){
+    return null;
+  }
+
+  return {
+    name,
+    areas
+  };
+
+}
+
+function mapHtml(map){
+
+  if(!map || !map.areas || !map.areas.length){
+    return '';
+  }
+
+  let html =
+`<map name="${esc(map.name)}" id="${esc(map.name)}">`;
+
+  map.areas.forEach(area => {
+
+    html += `
+  <area
+    shape="${esc(area.shape || 'rect')}"
+    coords="${esc(area.coords)}"
+    href="${esc(area.href)}"
+    target="${esc(area.target || '_blank')}"
+    alt="${esc(area.alt || '')}"
+  >`;
+
+  });
+
+  html += `
+</map>`;
+
+  return html;
+
+}
+
+function coverHtml(item, newCover){
+
+  if(!item){
+    return `
+<div>
+  <img
+    src="${esc(newCover)}"
+    class="fr-fic fr-dii"
+  >
+</div>`;
+  }
+
+  const usemap =
+    item.map
+      ? ` usemap="#${esc(item.map.name)}"`
+      : '';
+
+  const img =
+`<img
+    src="${esc(newCover)}"
+    class="fr-fic fr-dii"${usemap}
+  >`;
+
+  let html =
+    item.link
+      ? `
+<div>
+<a
+  href="${esc(item.link)}"
+  target="_blank"
+>
+  ${img}
+</a>
+</div>`
+      : `
+<div>
+  ${img}
+</div>`;
+
+  if(item.map){
+    html += '\n' + mapHtml(item.map);
+  }
+
+  return html;
+
+}
+
 function coverUrl(){
 
   const v =
@@ -979,6 +1126,9 @@ function parseSource(html){
 
         link:
           linkOf(img),
+
+        map:
+          mapOf(img, doc),
 
         survey:
           /설문|만족도|survey|23idp/i
@@ -1259,9 +1409,13 @@ function generate(){
       x => x.survey
     );
 
+  const originalCover =
+    monthly[0];
+
   /*
     01번 = 기존 DM 표지
     → 새 파트너센터 표지로 교체
+    → 원본의 단일 링크 / 이미지맵 클릭영역은 그대로 보존
 
     설문 이미지
     → 마지막 고정 설문 사용
@@ -1311,13 +1465,10 @@ function generate(){
   class="sellog-carousel-post"
   data-color="#00C853"
 >
-
-<div>
-  <img
-    src="${esc(newCover)}"
-    class="fr-fic fr-dii"
-  >
-</div>`;
+${coverHtml(
+  originalCover,
+  newCover
+)}`;
 
   groups.forEach(
     (group,i) => {
@@ -1376,9 +1527,19 @@ function generate(){
 
   render(out);
 
+  const coverLinkState =
+    originalCover && originalCover.map
+      ? `표지의 이미지맵 링크 ${originalCover.map.areas.length}개를 보존했습니다.`
+      : (
+          originalCover && originalCover.link
+            ? '표지의 원본 링크 1개를 보존했습니다.'
+            : '원본 표지에서 별도 링크 정보를 찾지 못했습니다.'
+        );
+
   show(
     'good',
     `맨 앞 표지만 새 주소로 교체했습니다.<br>
+    ${coverLinkState}<br>
     채널 영역과 콘텐츠 이미지는 DM HTML 순서를 그대로 사용했습니다.<br>
     마지막 설문만 고정 설정값으로 적용했습니다.`
   );
